@@ -1,0 +1,111 @@
+{# filepath: skillswap/templates/skills/form.html #}
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-md-7 col-lg-6">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h2 class="fw-bold mb-4">
+            {% if action == 'create' %}
+            <i class="bi bi-plus-circle text-success"></i> Додати навичку
+            {% else %}
+            <i class="bi bi-pencil text-primary"></i> Редагувати навичку
+            {% endif %}
+          </h2>
+          <form method="POST" novalidate>
+            {{ form.hidden_tag() }}
+            <div class="mb-3">
+              {{ form.title.label(class="form-label fw-semibold") }}
+              <datalist id="skill-suggestions"></datalist>
+              {{ form.title(
+                  class="form-control" + (" is-invalid" if form.title.errors else ""),
+                  placeholder="Наприклад: Python, Гітара, Іспанська мова",
+                  autocomplete="off",
+                  **{"list": "skill-suggestions", "class": "form-control skill-autocomplete" + (" is-invalid" if form.title.errors else "")}
+              ) }}
+              {% for e in form.title.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                {{ form.category.label(class="form-label fw-semibold") }}
+                {{ form.category(
+                    class="form-select" + (" is-invalid" if form.category.errors else ""),
+                    id="skillCategorySelect") }}
+                {% for e in form.category.errors %}
+                <div class="invalid-feedback">{{ e }}</div>
+                {% endfor %}
+              </div>
+              <div class="col-md-6">
+                {{ form.subcategory.label(class="form-label fw-semibold") }}
+                {{ form.subcategory(class="form-control", placeholder="Підкатегорія (необов'язково)") }}
+              </div>
+            </div>
+            {# Dynamic skill examples #}
+            <div id="skillHints" class="mb-3" style="display:none;">
+              <div class="text-muted small mb-1">
+                <i class="bi bi-lightbulb text-warning"></i>
+                Приклади навичок у цій категорії:
+              </div>
+              <div id="skillHintTags" class="d-flex flex-wrap gap-1"></div>
+            </div>
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                {{ form.level.label(class="form-label fw-semibold") }}
+                {{ form.level(class="form-select") }}
+              </div>
+              <div class="col-md-6">
+                {{ form.skill_type.label(class="form-label fw-semibold") }}
+                {{ form.skill_type(class="form-select") }}
+              </div>
+            </div>
+            <div class="mb-4">
+              {{ form.description.label(class="form-label fw-semibold") }}
+              {{ form.description(class="form-control", rows=3,
+                 placeholder="Розкажи детальніше про цю навичку...") }}
+            </div>
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">
+                💾 Зберегти
+              </button>
+              <a href="{{ url_for('skills.my_skills') }}" class="btn btn-outline-secondary rounded-pill px-4">
+                Скасувати
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const SKILLS_BY_CAT = {{ skills_by_category | tojson }};
+
+function updateSkillHints() {
+  const cat = document.getElementById('skillCategorySelect')?.value;
+  const hintsDiv = document.getElementById('skillHints');
+  const tagsDiv  = document.getElementById('skillHintTags');
+  const titleInput = document.querySelector('.skill-autocomplete');
+  if (!hintsDiv || !tagsDiv) return;
+  const skills = SKILLS_BY_CAT[cat] || [];
+  if (!skills.length) { hintsDiv.style.display = 'none'; return; }
+  hintsDiv.style.display = 'block';
+  tagsDiv.innerHTML = skills.map(s =>
+    `<button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2 py-0 skill-hint-btn"
+             data-skill="${s}">${s}</button>`
+  ).join('');
+  // Click to fill title
+  tagsDiv.querySelectorAll('.skill-hint-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (titleInput) titleInput.value = btn.dataset.skill;
+    });
+  });
+}
+
+document.getElementById('skillCategorySelect')?.addEventListener('change', updateSkillHints);
+updateSkillHints();
+</script>
+{% endblock %}

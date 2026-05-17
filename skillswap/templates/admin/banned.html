@@ -1,0 +1,77 @@
+{# filepath: skillswap/templates/admin/banned.html #}
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0">🚫 Заблоковані користувачі</h2>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-sm btn-outline-secondary rounded-pill">← Адмін</a>
+  </div>
+
+  {% if bans %}
+  <div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Користувач</th>
+            <th>Email</th>
+            <th>Причина</th>
+            <th>Заблокував</th>
+            <th>Дата</th>
+            <th>Дія</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ban in bans %}
+          <tr class="{% if ban.is_active() %}table-danger{% else %}table-secondary{% endif %}">
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <img src="{{ ban.user.avatar_or_default() }}"
+                     class="rounded-circle opacity-50"
+                     width="32" height="32" style="object-fit:cover;"/>
+                <div>
+                  <div class="fw-semibold small">{{ ban.user.full_name or '—' }}</div>
+                  {% if ban.is_active() %}
+                  <span class="badge bg-danger" style="font-size:.65rem;">🚫 АКТИВНИЙ БАН</span>
+                  {% else %}
+                  <span class="badge bg-secondary" style="font-size:.65rem;">Неактивний</span>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+            <td class="small">{{ ban.user.email }}</td>
+            <td class="small text-muted" style="max-width:200px;">
+              {{ ban.reason[:80] }}{% if ban.reason|length > 80 %}…{% endif %}
+            </td>
+            <td class="small">{{ ban.banned_by.email }}</td>
+            <td class="small text-muted">{{ ban.banned_at.strftime('%d.%m.%Y %H:%M') }}</td>
+            <td>
+              <div class="d-flex gap-1">
+                <a href="{{ url_for('users.profile', user_id=ban.user_id) }}"
+                   target="_blank"
+                   class="btn btn-xs btn-outline-secondary rounded-pill px-2 py-0">👁</a>
+                <form method="POST"
+                      action="{{ url_for('admin.unban_user', user_id=ban.user_id) }}"
+                      onsubmit="return confirm('Зняти бан з {{ ban.user.email }}?')">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit"
+                          class="btn btn-xs btn-outline-success rounded-pill px-2 py-0">
+                    ✓ Розбанити
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <div class="display-3 mb-3">✅</div>
+    <h5>Заблокованих користувачів немає</h5>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

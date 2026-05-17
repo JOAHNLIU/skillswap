@@ -1,0 +1,61 @@
+{# filepath: skillswap/templates/admin/skills.html #}
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0">⚡ Навички</h2>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-sm btn-outline-secondary rounded-pill">← Адмін</a>
+  </div>
+  <form method="GET" class="mb-3 d-flex gap-2">
+    <input type="text" name="q" class="form-control" value="{{ q }}" placeholder="Пошук за назвою..."/>
+    <button type="submit" class="btn btn-primary rounded-pill px-4">Знайти</button>
+  </form>
+  <div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr><th>ID</th><th>Назва</th><th>Тип</th><th>Категорія</th><th>Рівень</th><th>Юзер</th><th>Дія</th></tr>
+        </thead>
+        <tbody>
+          {% for s in pagination.items %}
+          <tr>
+            <td class="text-muted small">{{ s.id }}</td>
+            <td>{{ s.title }}</td>
+            <td>
+              <span class="badge {% if s.skill_type=='offer' %}bg-success-subtle text-success{% else %}bg-primary-subtle text-primary{% endif %}">
+                {{ 'Пропоную' if s.skill_type=='offer' else 'Шукаю' }}
+              </span>
+            </td>
+            <td>{{ s.category or '—' }}</td>
+            <td>{{ s.level }}</td>
+            <td><a href="{{ url_for('users.profile', user_id=s.user_id) }}" target="_blank">{{ s.user.email }}</a></td>
+            <td>
+              <form method="POST" action="{{ url_for('admin.delete_skill', skill_id=s.id) }}"
+                    onsubmit="return confirm('Видалити «{{ s.title }}»?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-xs btn-outline-danger rounded-pill px-2 py-0">🗑</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% if pagination.pages > 1 %}
+  <nav class="mt-3">
+    <ul class="pagination pagination-sm justify-content-center">
+      {% for p in pagination.iter_pages() %}
+        {% if p %}
+        <li class="page-item {% if p == pagination.page %}active{% endif %}">
+          <a class="page-link" href="{{ url_for('admin.skills', page=p, q=q) }}">{{ p }}</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">…</span></li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+{% endblock %}

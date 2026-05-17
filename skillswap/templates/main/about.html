@@ -1,0 +1,34 @@
+{# filepath: skillswap/templates/main/about.html #}
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <h1 class="fw-bold mb-3">🔄 Про платформу SkillSwap</h1>
+      <p class="lead text-muted">
+        SkillSwap — це веб-система бартерного обміну навичками між людьми.
+        Ніяких грошей. Тільки знання і час.
+      </p>
+      <hr/>
+      <h4 class="fw-bold">Концепція</h4>
+      <p>Кожна людина щось вміє і щось хоче навчитися. SkillSwap з'єднує тих,
+        чиї знання взаємодоповнюються: ти навчаєш когось Python — вони навчають тебе
+        іспанської мови. Взаємовигідно.</p>
+      <h4 class="fw-bold mt-4">Технічний стек</h4>
+      <ul>
+        <li>Backend: Python 3.12 / Flask (Application Factory)</li>
+        <li>ORM: Flask-SQLAlchemy + Flask-Migrate</li>
+        <li>Auth: Flask-Login + Werkzeug</li>
+        <li>Forms: Flask-WTF + CSRF protection</li>
+        <li>Frontend: Jinja2 SSR + Bootstrap 5.3 + Vanilla JS</li>
+        <li>DB: SQLite (за замовчуванням) / PostgreSQL</li>
+      </ul>
+      <div class="mt-4">
+        <a href="{{ url_for('auth.register') }}" class="btn btn-primary rounded-pill px-4">
+          Приєднатися безкоштовно
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

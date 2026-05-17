@@ -1,0 +1,44 @@
+{# filepath: skillswap/templates/exchanges/session_form.html #}
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h2 class="fw-bold mb-1">📅 Запланувати сесію</h2>
+          <p class="text-muted mb-4">Обмін #{{ exchange.id }}</p>
+          <form method="POST" novalidate>
+            {{ form.hidden_tag() }}
+            <div class="mb-3">
+              {{ form.scheduled_at.label(class="form-label fw-semibold") }}
+              {{ form.scheduled_at(class="form-control" + (" is-invalid" if form.scheduled_at.errors else ""),
+                 type="datetime-local") }}
+              {% for e in form.scheduled_at.errors %}
+              <div class="invalid-feedback">{{ e }}</div>
+              {% endfor %}
+              <div class="form-text">Формат: YYYY-MM-DDTHH:MM</div>
+            </div>
+            <div class="mb-3">
+              {{ form.duration_minutes.label(class="form-label fw-semibold") }}
+              {{ form.duration_minutes(class="form-control") }}
+            </div>
+            <div class="mb-4">
+              {{ form.notes.label(class="form-label fw-semibold") }}
+              {{ form.notes(class="form-control", rows=3,
+                 placeholder="Нотатки до сесії...") }}
+            </div>
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">
+                💾 Зберегти
+              </button>
+              <a href="{{ url_for('exchanges.detail', exchange_id=exchange.id) }}"
+                 class="btn btn-outline-secondary rounded-pill">Скасувати</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

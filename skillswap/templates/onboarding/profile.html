@@ -1,0 +1,106 @@
+{# filepath: skillswap/templates/onboarding/profile.html #}
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="text-center mb-4">
+        <div class="display-5 mb-2">👤</div>
+        <h2 class="fw-bold">Крок 1 з 2 — налаштуй профіль</h2>
+        <p class="text-muted">Заповни основні дані. Опис про себе можна залишити порожнім.</p>
+      </div>
+
+      <div class="progress mb-4" style="height:6px;">
+        <div class="progress-bar bg-primary" style="width:50%"></div>
+      </div>
+
+      <form method="POST" enctype="multipart/form-data" novalidate>
+        {{ form.hidden_tag() }}
+
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-body p-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-person-circle text-primary"></i> Особиста інформація</h5>
+            <div class="row g-3">
+              <div class="col-md-8">
+                <label class="form-label fw-semibold">{{ form.full_name.label.text }} <span class="text-danger">*</span></label>
+                {{ form.full_name(class="form-control" + (" is-invalid" if form.full_name.errors else ""), placeholder="Ім'я та прізвище") }}
+                {% for e in form.full_name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">{{ form.age.label.text }} <span class="text-danger">*</span></label>
+                {{ form.age(class="form-control" + (" is-invalid" if form.age.errors else ""), placeholder="20") }}
+                {% for e in form.age.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">{{ form.gender.label.text }} <span class="text-danger">*</span></label>
+                {{ form.gender(class="form-select" + (" is-invalid" if form.gender.errors else "")) }}
+                {% for e in form.gender.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">{{ form.city.label.text }} <span class="text-danger">*</span></label>
+                {{ form.city(class="form-control" + (" is-invalid" if form.city.errors else ""), placeholder="Київ") }}
+                {% for e in form.city.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold">{{ form.bio.label.text }} <span class="text-muted small">необов’язково</span></label>
+                {{ form.bio(class="form-control" + (" is-invalid" if form.bio.errors else ""), rows=3, placeholder="Коротко про досвід, інтереси або формат навчання...") }}
+                {% for e in form.bio.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-body p-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-image text-success"></i> Фото профілю</h5>
+            <div class="d-flex align-items-center gap-3">
+              <img src="{{ current_user.avatar_or_default() }}" class="rounded-circle" width="64" height="64" id="avatarPreview" style="object-fit:cover;"/>
+              {{ form.avatar(class="form-control", id="avatarInput", accept="image/*") }}
+            </div>
+            <div class="form-text">Фото можна додати одразу або пізніше в профілі.</div>
+          </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-body p-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-clock text-warning"></i> Час доступності <span class="text-danger">*</span></h5>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">{{ form.available_from.label.text }}</label>
+                {{ form.available_from(class="form-select") }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">{{ form.available_to.label.text }}</label>
+                {{ form.available_to(class="form-select") }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="alert alert-info border-0 rounded-4">
+          Наступний крок — додавання навичок. Для роботи з системою потрібно вказати мінімум одну навичку, яку ви надаєте, і мінімум одну навичку, яку шукаєте.
+        </div>
+
+        <div class="d-grid">
+          <button type="submit" class="btn btn-primary btn-lg rounded-pill fw-bold py-3">
+            💾 Зберегти профіль і перейти до навичок →
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('avatarInput')?.addEventListener('change', function() {
+  const file = this.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = e => document.getElementById('avatarPreview').src = e.target.result;
+    reader.readAsDataURL(file);
+  }
+});
+</script>
+{% endblock %}

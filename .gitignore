@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+*.db
+*.sqlite3
+.env
+skillswap/static/uploads/avatars/*
+!skillswap/static/uploads/avatars/.gitkeep
+instance/
+.idea/
+*.egg-info/
+dist/
+build/
+migrations/

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-7 col-lg-5">
+
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4 p-md-5">
+
+                    <div class="text-center mb-4">
+                        <h1 class="h3 fw-bold">
+                            Реєстрація
+                        </h1>
+
+                        <p class="text-muted small mb-0">
+                            Створіть акаунт SkillSwap для обміну навичками
+                        </p>
+                    </div>
+
+                    <form method="POST" action="{{ url_for('auth.register') }}">
+                        {% if csrf_token is defined %}
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                Ім’я та прізвище
+                            </label>
+
+                            <input
+                                type="text"
+                                name="full_name"
+                                class="form-control rounded-pill"
+                                placeholder="Наприклад: Іоанн Любченко"
+                                required
+                            >
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                Email
+                            </label>
+
+                            <input
+                                type="email"
+                                name="email"
+                                class="form-control rounded-pill"
+                                placeholder="your@email.com"
+                                required
+                            >
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                Пароль
+                            </label>
+
+                            <input
+                                type="password"
+                                name="password"
+                                class="form-control rounded-pill"
+                                minlength="6"
+                                placeholder="Мінімум 6 символів"
+                                required
+                            >
+                        </div>
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary w-100 rounded-pill fw-semibold"
+                        >
+                            Зареєструватися
+                        </button>
+                    </form>
+
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('auth.login') }}" class="text-muted small">
+                            Вже маєте акаунт? Увійти
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

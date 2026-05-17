@@ -1,0 +1,54 @@
+{# filepath: skillswap/templates/totp/verify.html #}
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-md-5 col-lg-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4 text-center">
+          <div class="fs-1 mb-2">🔐</div>
+          <h4 class="fw-bold mb-1">Двофакторна автентифікація</h4>
+          <p class="text-muted small mb-4">
+            Введи 6-значний код з додатку або з листа на пошті
+          </p>
+
+          <form method="POST" action="{{ url_for('totp.verify') }}" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-3">
+              <input type="text" name="code"
+                     class="form-control form-control-lg text-center fw-bold fs-3"
+                     maxlength="6" pattern="\d{6}"
+                     placeholder="000000"
+                     autocomplete="one-time-code" autofocus
+                     inputmode="numeric"/>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 rounded-pill fw-semibold py-2 mb-3">
+              Підтвердити →
+            </button>
+          </form>
+
+          <div class="border rounded-3 p-3 bg-body-secondary">
+            <p class="text-muted small mb-2">
+              <i class="bi bi-envelope"></i>
+              Немає доступу до додатку? Отримай код на пошту:
+            </p>
+            <form method="POST" action="{{ url_for('totp.send_email_code') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-outline-primary btn-sm rounded-pill w-100">
+                📧 Надіслати код на пошту
+              </button>
+            </form>
+            <p class="text-muted" style="font-size:.7rem;" class="mt-1">
+              Код буде дійсний 5 хвилин
+            </p>
+          </div>
+
+          <a href="{{ url_for('auth.login') }}" class="btn btn-link text-muted small mt-2 d-block">
+            ← Назад до входу
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,103 @@
+{# filepath: skillswap/templates/webhooks/detail.html #}
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-7">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0">📡 Вебхук #{{ hook.id }}</h2>
+        <a href="{{ url_for('webhooks.index') }}" class="btn btn-sm btn-outline-secondary rounded-pill">← Назад</a>
+      </div>
+
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body p-4">
+          <div class="mb-3">
+            <label class="form-label text-muted small fw-semibold">URL</label>
+            <div class="input-group">
+              <input type="text" class="form-control font-monospace small" value="{{ hook.url }}" readonly/>
+              <button class="btn btn-outline-secondary"
+                      onclick="navigator.clipboard.writeText('{{ hook.url }}');this.textContent='✅'">📋</button>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-muted small fw-semibold">Secret (HMAC-SHA256)</label>
+            <div class="input-group">
+              <input type="password" class="form-control font-monospace small"
+                     value="{{ hook.secret }}" id="secretInput" readonly/>
+              <button class="btn btn-outline-secondary" type="button"
+                      onclick="var i=document.getElementById('secretInput');i.type=i.type==='password'?'text':'password'">👁</button>
+              <button class="btn btn-outline-secondary"
+                      onclick="navigator.clipboard.writeText('{{ hook.secret }}');this.textContent='✅'">📋</button>
+            </div>
+            <div class="form-text text-danger small">⚠️ Зберігай secret у безпечному місці!</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-muted small fw-semibold">Підписані події</label>
+            <div>
+              {% for ev in hook.get_events() %}
+              <span class="badge bg-primary-subtle text-primary me-1 mb-1">{{ ev }}</span>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label text-muted small fw-semibold">Статус</label>
+              <div>
+                <span class="badge {% if hook.is_active %}bg-success{% else %}bg-secondary{% endif %} px-3 py-2">
+                  {{ '● Активний' if hook.is_active else '○ Вимкнено' }}
+                </span>
+              </div>
+            </div>
+            <div class="col-6">
+              <label class="form-label text-muted small fw-semibold">Остання відправка</label>
+              {% if hook.last_triggered_at %}
+              <div class="small">{{ hook.last_triggered_at.strftime('%d.%m.%Y %H:%M') }}</div>
+              <span class="badge {% if hook.last_status_code == 200 %}bg-success{% else %}bg-danger{% endif %}">
+                HTTP {{ hook.last_status_code }}
+              </span>
+              {% else %}
+              <span class="text-muted small">Ще не надсилався</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent fw-bold border-0 small">🔐 Верифікація підпису (Python)</div>
+        <div class="card-body p-0">
+          <pre class="p-3 mb-0" style="font-size:.75rem;background:var(--bs-body-bg);"><code>import hmac, hashlib
+
+def verify(body: bytes, secret: str, sig: str) -> bool:
+    expected = "sha256=" + hmac.new(
+        secret.encode(), body, hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, sig)
+
+# Flask receiver example:
+sig  = request.headers.get("X-SkillSwap-Signature")
+body = request.get_data()
+if not verify(body, YOUR_SECRET, sig):
+    abort(401)</code></pre>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <form method="POST" action="{{ url_for('webhooks.test_webhook', hook_id=hook.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-primary rounded-pill px-4">📡 Надіслати тест</button>
+        </form>
+        <form method="POST" action="{{ url_for('webhooks.toggle', hook_id=hook.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-outline-warning rounded-pill">{{ 'Вимкнути' if hook.is_active else 'Увімкнути' }}</button>
+        </form>
+        <form method="POST" action="{{ url_for('webhooks.delete', hook_id=hook.id) }}"
+              onsubmit="return confirm('Видалити вебхук?')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-outline-danger rounded-pill">🗑 Видалити</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

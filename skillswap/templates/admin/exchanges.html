@@ -1,0 +1,54 @@
+{# filepath: skillswap/templates/admin/exchanges.html #}
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0">🔄 Обміни</h2>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-sm btn-outline-secondary rounded-pill">← Адмін</a>
+  </div>
+  <div class="d-flex gap-2 mb-3">
+    {% for slug, lbl in [('','Всі'),('pending','Очікують'),('accepted','Прийняті'),('completed','Завершені'),('rejected','Відхилені')] %}
+    <a href="{{ url_for('admin.exchanges', status=slug) }}"
+       class="btn btn-sm rounded-pill {% if status == slug %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+      {{ lbl }}
+    </a>
+    {% endfor %}
+  </div>
+  <div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr><th>ID</th><th>Від</th><th>Кому</th><th>Статус</th><th>Дата</th></tr>
+        </thead>
+        <tbody>
+          {% for ex in pagination.items %}
+          {% set label, color = ex.status_label() %}
+          <tr>
+            <td><a href="{{ url_for('exchanges.detail', exchange_id=ex.id) }}" target="_blank">#{{ ex.id }}</a></td>
+            <td class="small">{{ ex.proposer.email }}</td>
+            <td class="small">{{ ex.receiver.email }}</td>
+            <td><span class="badge bg-{{ color }}-subtle text-{{ color }}">{{ label }}</span></td>
+            <td class="text-muted small">{{ ex.created_at.strftime('%d.%m.%Y') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% if pagination.pages > 1 %}
+  <nav class="mt-3">
+    <ul class="pagination pagination-sm justify-content-center">
+      {% for p in pagination.iter_pages() %}
+        {% if p %}
+        <li class="page-item {% if p == pagination.page %}active{% endif %}">
+          <a class="page-link" href="{{ url_for('admin.exchanges', page=p, status=status) }}">{{ p }}</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">…</span></li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+{% endblock %}

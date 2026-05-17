@@ -1,0 +1,156 @@
+{# filepath: skillswap/templates/onboarding/skills.html #}
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-9">
+      <div class="text-center mb-4">
+        <div class="display-5 mb-2">⚡</div>
+        <h2 class="fw-bold">Крок 2 з 2 — додай навички</h2>
+        <p class="text-muted mb-0">Щоб система могла підбирати партнерів для бартерного обміну, вкажіть що ви надаєте і що хочете отримати.</p>
+      </div>
+
+      <div class="progress mb-4" style="height:6px;">
+        <div class="progress-bar bg-primary" style="width:100%"></div>
+      </div>
+
+      {% if not offer_skills or not want_skills %}
+      <div class="alert alert-warning border-0 rounded-4 shadow-sm">
+        <strong>Потрібно додати навички.</strong><br>
+        Для функціонування з системою вкажіть мінімум <strong>одну навичку, яку надаєте</strong>, і мінімум <strong>одну навичку, яку шукаєте</strong>. Також для кожної навички потрібно вказати рівень. Тільки після цього буде доступний дашборд, пошук користувачів, обміни, чат і контракти.
+      </div>
+      {% endif %}
+
+      <form method="POST" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="row g-4">
+          <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body p-4">
+                <h5 class="fw-bold text-success mb-1">✅ Надаю навички</h5>
+                <p class="text-muted small">Що ви можете пояснити або показати іншому користувачу.</p>
+                <div id="offer-list" class="mb-3">
+                  {% for s in offer_skills %}
+                    <span class="badge bg-success-subtle text-success me-2 mb-2 py-2 px-3 fs-6">{{ s.title }} · {{ s.level }}</span>
+                  {% endfor %}
+                </div>
+                <div class="mb-2">
+                  <input type="text" id="offer-title" class="form-control" placeholder="Наприклад: Python">
+                </div>
+                <div class="mb-2">
+                  <select id="offer-category" class="form-select">
+                    {% for val, label in categories %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <select id="offer-level" class="form-select">
+                    {% for val, label in levels %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+                  </select>
+                </div>
+                <button type="button" class="btn btn-success rounded-pill w-100" onclick="addSkill('offer')">+ Додати навичку</button>
+                <div id="offer-hints" class="mt-2"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body p-4">
+                <h5 class="fw-bold text-primary mb-1">🔍 Шукаю навички</h5>
+                <p class="text-muted small">Чого ви хочете навчитися в межах бартерного обміну.</p>
+                <div id="want-list" class="mb-3">
+                  {% for s in want_skills %}
+                    <span class="badge bg-primary-subtle text-primary me-2 mb-2 py-2 px-3 fs-6">{{ s.title }} · {{ s.level }}</span>
+                  {% endfor %}
+                </div>
+                <div class="mb-2">
+                  <input type="text" id="want-title" class="form-control" placeholder="Наприклад: Англійська">
+                </div>
+                <div class="mb-2">
+                  <select id="want-category" class="form-select">
+                    {% for val, label in categories %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <select id="want-level" class="form-select">
+                    {% for val, label in levels %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+                  </select>
+                </div>
+                <button type="button" class="btn btn-primary rounded-pill w-100" onclick="addSkill('want')">+ Додати навичку</button>
+                <div id="want-hints" class="mt-2"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="hidden-fields"></div>
+        <div class="d-grid mt-4">
+          <button type="submit" class="btn btn-primary btn-lg rounded-pill fw-bold py-3">✅ Зберегти навички і перейти в систему</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const skillsData = { offer: [], want: [] };
+const SKILLS_BY_CAT = {{ skills_by_category | tojson }};
+const LEVEL_LABELS = {{ dict(levels) | tojson }};
+
+function escapeHtml(text) {
+  return String(text || '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]));
+}
+function addSkill(type) {
+  const titleEl = document.getElementById(type + '-title');
+  const catEl = document.getElementById(type + '-category');
+  const levelEl = document.getElementById(type + '-level');
+  const title = titleEl.value.trim();
+  const category = catEl.value || 'Інше';
+  const level = levelEl.value || 'beginner';
+  if (!title) { titleEl.classList.add('is-invalid'); return; }
+  titleEl.classList.remove('is-invalid');
+  skillsData[type].push({ title, category, level });
+  titleEl.value = '';
+  renderSkills(type);
+}
+function removeSkill(type, idx) {
+  skillsData[type].splice(idx, 1);
+  renderSkills(type);
+}
+function renderSkills(type) {
+  const list = document.getElementById(type + '-list');
+  const color = type === 'offer' ? 'success' : 'primary';
+  list.innerHTML = '';
+  skillsData[type].forEach((s, i) => {
+    const levelLabel = LEVEL_LABELS[s.level] || s.level;
+    list.innerHTML += `<span class="badge bg-${color}-subtle text-${color} me-2 mb-2 py-2 px-3 fs-6 d-inline-flex align-items-center gap-1">${escapeHtml(s.title)} <span class="opacity-75 small">(${escapeHtml(s.category)}, ${escapeHtml(levelLabel)})</span><button type="button" class="btn-close ms-1" style="font-size:.55em" onclick="removeSkill('${type}', ${i})"></button></span>`;
+  });
+  renderHidden();
+}
+function renderHidden() {
+  const box = document.getElementById('hidden-fields');
+  box.innerHTML = '';
+  ['offer','want'].forEach(type => {
+    skillsData[type].forEach(s => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = `skills_${type}[]`;
+      input.value = `${s.title}|${s.category}|${s.level}`;
+      box.appendChild(input);
+    });
+  });
+}
+function updateHints(type) {
+  const cat = document.getElementById(type + '-category').value;
+  const hints = document.getElementById(type + '-hints');
+  const arr = (SKILLS_BY_CAT[cat] || []).slice(0, 10);
+  hints.innerHTML = arr.length ? '<span class="text-muted small me-1">Приклади:</span>' + arr.map(s => `<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0 me-1 mb-1" onclick="document.getElementById('${type}-title').value='${escapeHtml(s)}'">${escapeHtml(s)}</button>`).join('') : '';
+}
+['offer','want'].forEach(type => {
+  document.getElementById(type + '-category')?.addEventListener('change', () => updateHints(type));
+  updateHints(type);
+});
+</script>
+{% endblock %}

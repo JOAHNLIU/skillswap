@@ -1,0 +1,93 @@
+{# filepath: skillswap/templates/trust/skill_detail.html #}
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4 text-center">
+          <div class="display-3 mb-2">{{ badge_icon }}</div>
+          <h3 class="fw-bold mb-1">{{ skill.title }}</h3>
+          <div class="text-muted small mb-3">
+            {{ skill.category }} ·
+            <a href="{{ url_for('users.profile', user_id=skill.user_id) }}">
+              {{ skill.user.full_name or skill.user.email }}
+            </a>
+          </div>
+          <div class="d-flex justify-content-center mb-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center"
+                 style="width:110px;height:110px;
+                   border:8px solid {{ '#22c55e' if record and record.score>=60 else '#f59e0b' if record and record.score>=30 else '#94a3b8' }};">
+              <div>
+                <div class="fw-bold" style="font-size:2rem;">{{ record.score|int if record else 0 }}</div>
+                <div class="text-muted" style="font-size:.7rem;">/ 100</div>
+              </div>
+            </div>
+          </div>
+          <span class="badge bg-primary-subtle text-primary fs-6 px-3 py-2">
+            {{ badge_icon }} {{ badge_label }}
+          </span>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent fw-bold border-0">📊 Складові оцінки</div>
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item d-flex justify-content-between px-4">
+            <div>
+              <div class="fw-semibold">👍 Підтвердження</div>
+              <div class="text-muted small">Верифіковані +10, інші +3</div>
+            </div>
+            <span class="badge bg-success rounded-pill fs-6">{{ record.endorsements_count if record else 0 }}</span>
+          </li>
+          <li class="list-group-item d-flex justify-content-between px-4">
+            <div>
+              <div class="fw-semibold">🔄 Завершені обміни</div>
+              <div class="text-muted small">З цією навичкою +8 кожен</div>
+            </div>
+            <span class="badge bg-primary rounded-pill fs-6">{{ record.verified_exchanges if record else 0 }}</span>
+          </li>
+          <li class="list-group-item d-flex justify-content-between px-4">
+            <div>
+              <div class="fw-semibold">⭐ Позитивні відгуки</div>
+              <div class="text-muted small">Рейтинг ≥4 зірки +5</div>
+            </div>
+            <span class="badge bg-warning text-dark rounded-pill fs-6">{{ record.positive_reviews if record else 0 }}</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+          <div class="d-flex justify-content-between mb-2 small">
+            <span class="text-muted">Trust Score</span>
+            <span class="fw-bold">{{ record.score|int if record else 0 }}/100</span>
+          </div>
+          <div class="progress" style="height:12px;border-radius:8px;">
+            <div class="progress-bar {{ 'bg-success' if record and record.score>=60 else 'bg-warning' if record and record.score>=30 else 'bg-secondary' }}"
+                 style="width:{{ record.score if record else 0 }}%;border-radius:8px;"></div>
+          </div>
+          <div class="d-flex justify-content-between mt-1" style="font-size:.65rem;">
+            <span class="text-muted">❓ 0</span>
+            <span class="text-warning">🔰 20</span>
+            <span class="text-primary">✅ 40</span>
+            <span class="text-success">⭐ 60</span>
+            <span class="text-success fw-bold">🏆 80</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        {% if skill.user_id == current_user.id or current_user.is_admin %}
+        <form method="POST" action="{{ url_for('trust.recalculate', skill_id=skill.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-outline-primary rounded-pill">🔄 Перерахувати</button>
+        </form>
+        {% endif %}
+        <a href="{{ url_for('trust.leaderboard') }}" class="btn btn-outline-secondary rounded-pill">🏆 Лідерборд</a>
+        <a href="{{ url_for('skills.detail', skill_id=skill.id) }}" class="btn btn-outline-secondary rounded-pill">← Навичка</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

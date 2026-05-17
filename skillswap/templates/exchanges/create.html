@@ -1,0 +1,78 @@
+{# filepath: skillswap/templates/exchanges/create.html #}
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h2 class="fw-bold mb-1"><i class="bi bi-arrow-left-right text-primary"></i> Нова пропозиція</h2>
+          {% if receiver %}
+          <p class="text-muted mb-4">
+            Пропозиція для
+            <strong>{{ receiver.full_name or receiver.email }}</strong>
+            {% if receiver.city %}· {{ receiver.city }}{% endif %}
+          </p>
+          {% endif %}
+
+          <form method="POST" novalidate>
+            {{ form.hidden_tag() }}
+            {{ form.receiver_id(type="hidden") }}
+
+            {% if receiver %}
+            <div class="d-flex align-items-center gap-3 p-3 bg-body-secondary rounded-3 mb-4">
+              <img src="{{ receiver.avatar_or_default() }}" class="rounded-circle"
+                   width="56" height="56" style="object-fit:cover;"/>
+              <div>
+                <div class="fw-bold">{{ receiver.full_name or receiver.email }}</div>
+                <div class="text-muted small">{{ receiver.city or '' }} {% if receiver.age %}· {{ receiver.age }} р.{% endif %}</div>
+              </div>
+            </div>
+            {% endif %}
+
+            <div class="mb-3">
+              {{ form.offered_skill_id.label(class="form-label fw-semibold") }}
+              {{ form.offered_skill_id(class="form-select") }}
+              <div class="form-text">Навичка яку ти будеш викладати</div>
+            </div>
+
+            <div class="mb-3">
+              {{ form.requested_skill_id.label(class="form-label fw-semibold") }}
+              {{ form.requested_skill_id(class="form-select") }}
+              <div class="form-text">Навичка, яку хочеш отримати натомість</div>
+            </div>
+
+            <div class="mb-2">
+              <label class="form-label fw-semibold">{{ form.message.label.text }}</label>
+              <div class="d-flex flex-wrap gap-1 mb-2">
+                {% for tmpl in [
+                  "Привіт! Пропоную обмін навичками. Коли тобі зручно поговорити?",
+                  "Готовий навчати і вчитися! Давай обговоримо деталі.",
+                  "Бачу, що тебе цікавить саме те, що я вмію. Пропоную спробувати!",
+                ] %}
+                <button type="button"
+                        class="btn btn-xs btn-outline-secondary rounded-pill px-2 small"
+                        onclick="document.getElementById('msgTextarea').value='{{ tmpl }}'">
+                  {{ tmpl[:30] }}…
+                </button>
+                {% endfor %}
+              </div>
+              {{ form.message(class="form-control", rows=3, id="msgTextarea",
+                 placeholder="Привіт! Я хотів би обмінятися навичками...") }}
+            </div>
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">
+                🤝 Надіслати пропозицію
+              </button>
+              <a href="{{ url_for('exchanges.index') }}" class="btn btn-outline-secondary rounded-pill">
+                Скасувати
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

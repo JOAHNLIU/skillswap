@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4 p-md-5">
+
+                    <div class="text-center mb-4">
+                        <h1 class="h3 fw-bold">Вхід</h1>
+                        <p class="text-muted small mb-0">
+                            Увійдіть у свій акаунт SkillSwap
+                        </p>
+                    </div>
+
+                    <form method="POST" action="{{ url_for('auth.login') }}">
+                        {% if csrf_token is defined %}
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Email акаунта</label>
+                            <input
+                                type="email"
+                                name="email"
+                                class="form-control rounded-pill"
+                                placeholder="your@email.com"
+                                required
+                            >
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Пароль</label>
+                            <input
+                                type="password"
+                                name="password"
+                                class="form-control rounded-pill"
+                                placeholder="Ваш пароль"
+                            >
+                        </div>
+
+                        <button
+                            type="submit"
+                            name="action"
+                            value="login"
+                            class="btn btn-primary w-100 rounded-pill fw-semibold"
+                        >
+                            Увійти
+                        </button>
+
+                        <button
+                            type="submit"
+                            name="action"
+                            value="reset_password"
+                            class="btn btn-outline-secondary w-100 rounded-pill fw-semibold mt-2"
+                            formnovalidate
+                        >
+                            Забув пароль? Надіслати лист на цей email
+                        </button>
+                    </form>
+
+                    <div class="alert alert-info small rounded-4 mt-4 mb-0">
+                        Для відновлення паролю система використовує тільки email,
+                        введений у полі входу. Іншу адресу для отримання листа
+                        вказати неможливо.
+                    </div>
+
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('auth.register') }}" class="text-muted small">
+                            Створити акаунт
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,220 @@
+{# filepath: skillswap/templates/main/dashboard.html #}
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+
+  {# ── Welcome header ─────────────────────────────────────────────────────── #}
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="fw-bold mb-0">
+        Привіт, {{ current_user.full_name or current_user.email.split('@')[0] }}! 👋
+      </h1>
+      <p class="text-muted mb-0">Ось що відбувається у твоєму SkillSwap</p>
+    </div>
+    <a href="{{ url_for('skills.index') }}" class="btn btn-primary rounded-pill px-4">
+      <i class="bi bi-search"></i> Пошук партнерів
+    </a>
+  </div>
+
+  {# ── Stats row ──────────────────────────────────────────────────────────── #}
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center p-3 h-100">
+        <div class="fs-2 text-success fw-bold">{{ stats.skills_offer }}</div>
+        <div class="text-muted small">Пропоную навичок</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center p-3 h-100">
+        <div class="fs-2 text-primary fw-bold">{{ stats.skills_want }}</div>
+        <div class="text-muted small">Шукаю навичок</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center p-3 h-100">
+        <div class="fs-2 text-warning fw-bold">{{ stats.exchanges_total }}</div>
+        <div class="text-muted small">Всього обмінів</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center p-3 h-100">
+        <div class="fs-2 text-danger fw-bold">{{ stats.rating }}</div>
+        <div class="text-muted small">Рейтинг балів</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    {# ── Left: Matches ──────────────────────────────────────────────────────── #}
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+          <h5 class="fw-bold mb-0"><i class="bi bi-stars text-warning"></i> Рекомендовані матчі</h5>
+          <a href="{{ url_for('skills.index') }}" class="btn btn-sm btn-outline-primary rounded-pill">Всі</a>
+        </div>
+        <div class="card-body pt-0">
+          {% if matches %}
+          <div class="row g-3">
+            {% for m in matches %}
+            <div class="col-sm-6">
+              <div class="card border match-card h-100">
+                <div class="card-body p-3">
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <img src="{{ m.user.avatar_or_default() }}" class="rounded-circle"
+                         width="40" height="40" style="object-fit:cover;" alt="avatar"/>
+                    <div class="overflow-hidden">
+                      <div class="fw-semibold text-truncate">{{ m.user.full_name or m.user.email }}</div>
+                      <div class="text-muted small">{{ m.user.city or '—' }}</div>
+                    </div>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center">
+                    <span class="badge bg-success-subtle text-success fw-semibold">
+                      {{ m.match_score }}% матч
+                    </span>
+                    <a href="{{ url_for('users.profile', user_id=m.user.id) }}"
+                       class="btn btn-xs btn-outline-primary rounded-pill px-2 py-0 small">
+                      Профіль
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="text-center py-4 text-muted">
+            <div class="fs-1">🔍</div>
+            <p>Додай навички, щоб знайти матчі!</p>
+            <a href="{{ url_for('skills.create') }}" class="btn btn-primary btn-sm rounded-pill">Додати навичку</a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# ── Right: Recent exchanges ─────────────────────────────────────────── #}
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+          <h5 class="fw-bold mb-0">
+            <i class="bi bi-arrow-left-right"></i> Останні обміни
+            {% if pending_incoming > 0 %}
+            <span class="badge bg-danger">{{ pending_incoming }}</span>
+            {% endif %}
+          </h5>
+          <a href="{{ url_for('exchanges.index') }}" class="btn btn-sm btn-outline-secondary rounded-pill">Всі</a>
+        </div>
+        <div class="card-body pt-0">
+          {% if recent_exchanges %}
+          <ul class="list-group list-group-flush">
+            {% for ex in recent_exchanges %}
+            {% set label, color = ex.status_label() %}
+            <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+              <div class="small">
+                <div class="fw-semibold">
+                  {% if ex.proposer_id == current_user.id %}
+                    → {{ ex.receiver.full_name or ex.receiver.email }}
+                  {% else %}
+                    ← {{ ex.proposer.full_name or ex.proposer.email }}
+                  {% endif %}
+                </div>
+                <div class="text-muted">{{ ex.created_at.strftime('%d.%m.%Y') }}</div>
+              </div>
+              <span class="badge bg-{{ color }}-subtle text-{{ color }} fw-semibold">{{ label }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <div class="text-center py-4 text-muted">
+            <div class="fs-1">🤝</div>
+            <p class="small">Обмінів ще немає.<br>Знайди партнера і запропонуй!</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+
+      {# ── Activity Feed ──────────────────────────────────────────────── #}
+      <div class="card border-0 shadow-sm mt-3">
+        <div class="card-header bg-transparent border-0">
+          <h6 class="fw-bold mb-0">🌐 Активність платформи</h6>
+        </div>
+        <div class="card-body pt-0 px-3" id="activityFeed">
+          <div class="text-muted small text-center py-3">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+          </div>
+        </div>
+      </div>
+
+      {# Quick actions #}
+      <div class="card border-0 shadow-sm mt-3">
+        <div class="card-body">
+          <h6 class="fw-bold mb-3">⚡ Швидкі дії</h6>
+          <div class="d-grid gap-2">
+            <a href="{{ url_for('skills.create') }}" class="btn btn-outline-success btn-sm rounded-pill">
+              <i class="bi bi-plus-circle"></i> Додати навичку
+            </a>
+            <a href="{{ url_for('users.profile', user_id=current_user.id) }}" class="btn btn-outline-primary btn-sm rounded-pill">
+              <i class="bi bi-person"></i> Мій профіль
+            </a>
+            <a href="{{ url_for('skills.index') }}" class="btn btn-outline-warning btn-sm rounded-pill">
+              <i class="bi bi-search"></i> Знайти партнера
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── Activity Feed ─────────────────────────────────────────────────────────
+async function loadActivity() {
+  const feed = document.getElementById('activityFeed');
+  if (!feed) return;
+  try {
+    const r = await fetch('/api/activity');
+    const events = await r.json();
+    if (!events.length) {
+      feed.innerHTML = '<p class="text-muted small text-center py-2">Активності ще немає</p>';
+      return;
+    }
+    feed.innerHTML = events.slice(0,8).map(e => `
+      <div class="d-flex align-items-start gap-2 py-2 border-bottom">
+        <img src="${e.actor_avatar}" class="rounded-circle flex-shrink-0"
+             width="28" height="28" style="object-fit:cover;"/>
+        <div class="small overflow-hidden">
+          <a class="fw-semibold text-decoration-none" href="${e.actor_url || '#'}">${e.actor_name}</a>
+          <span class="text-muted"> ${e.label}</span>
+          ${e.object_title ? `<span class="text-primary"> «${e.object_title}»</span>` : ''}
+          <div class="text-muted" style="font-size:.68rem;">${e.created_at}</div>
+        </div>
+      </div>`).join('');
+  } catch(_) {
+    feed.innerHTML = '<p class="text-muted small text-center py-2">Не вдалося завантажити</p>';
+  }
+}
+loadActivity();
+
+// ── Endorse skills ────────────────────────────────────────────────────────
+document.addEventListener('click', async e => {
+  const btn = e.target.closest('.endorse-btn');
+  if (!btn) return;
+  const skillId = btn.dataset.skillId;
+  try {
+    const r = await fetch(`/api/skills/${skillId}/endorse`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCsrfToken() }
+    });
+    const data = await r.json();
+    if (data.error) return;
+    btn.querySelector('.endorse-count').textContent = data.count;
+    btn.classList.toggle('btn-success',    data.endorsed);
+    btn.classList.toggle('btn-outline-secondary', !data.endorsed);
+  } catch(_) {}
+});
+</script>
+{% endblock %}
+

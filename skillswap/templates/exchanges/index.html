@@ -1,0 +1,76 @@
+{# filepath: skillswap/templates/exchanges/index.html #}
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-arrow-left-right text-primary"></i> Мої обміни</h2>
+    <a href="{{ url_for('skills.index') }}" class="btn btn-primary rounded-pill">
+      <i class="bi bi-plus"></i> Новий обмін
+    </a>
+  </div>
+
+  {# Status filter tabs #}
+  {% set tab_list = [('', 'Всі'), ('pending', 'Очікують'), ('accepted', 'Прийняті'), ('rejected', 'Відхилені'), ('completed', 'Завершені')] %}
+  <ul class="nav nav-pills mb-4 gap-1">
+    {% for slug, lbl in tab_list %}
+    <li class="nav-item">
+      <a class="nav-link {% if status_filter == slug %}active{% endif %} rounded-pill"
+         href="{{ url_for('exchanges.index', status=slug) }}">
+        {{ lbl }}
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+
+  {% if exchanges %}
+  <div class="row g-3">
+    {% for ex in exchanges %}
+    {% set label, color = ex.status_label() %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-3">
+          <div class="d-flex justify-content-between mb-2">
+            <span class="badge bg-{{ color }}-subtle text-{{ color }} fw-semibold">{{ label }}</span>
+            <span class="text-muted small">{{ ex.created_at.strftime('%d.%m.%Y') }}</span>
+          </div>
+          <div class="d-flex align-items-center gap-2 mb-2">
+            {% if ex.proposer_id == current_user.id %}
+            <img src="{{ ex.receiver.avatar_or_default() }}" class="rounded-circle"
+                 width="36" height="36" style="object-fit:cover;"/>
+            <div>
+              <div class="fw-semibold small">→ {{ ex.receiver.full_name or ex.receiver.email }}</div>
+              <div class="text-muted" style="font-size:.75rem">Ти запропонував</div>
+            </div>
+            {% else %}
+            <img src="{{ ex.proposer.avatar_or_default() }}" class="rounded-circle"
+                 width="36" height="36" style="object-fit:cover;"/>
+            <div>
+              <div class="fw-semibold small">← {{ ex.proposer.full_name or ex.proposer.email }}</div>
+              <div class="text-muted" style="font-size:.75rem">Тобі запропонували</div>
+            </div>
+            {% endif %}
+          </div>
+          {% if ex.offered_skill %}
+          <div class="small text-muted mb-1">
+            💡 {{ ex.offered_skill.title }}
+            {% if ex.requested_skill %} ↔ {{ ex.requested_skill.title }}{% endif %}
+          </div>
+          {% endif %}
+          <a href="{{ url_for('exchanges.detail', exchange_id=ex.id) }}"
+             class="btn btn-sm btn-outline-primary rounded-pill w-100 mt-2">
+            Деталі →
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <div class="display-3 mb-3">🤝</div>
+    <h5>Обмінів ще немає</h5>
+    <a href="{{ url_for('skills.index') }}" class="btn btn-primary rounded-pill mt-2">Знайти партнера</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

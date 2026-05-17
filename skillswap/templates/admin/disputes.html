@@ -1,0 +1,46 @@
+{# filepath: skillswap/templates/admin/disputes.html #}
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0">⚠️ Диспути</h2>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-sm btn-outline-secondary rounded-pill">← Адмін</a>
+  </div>
+  <div class="d-flex gap-2 mb-3 flex-wrap">
+    {% for slug, lbl in [('open','Відкриті'),('under_review','На розгляді'),('resolved_complete','Завершено'),('resolved_cancel','Скасовано'),('','Всі')] %}
+    <a href="{{ url_for('admin.disputes_list', status=slug) }}"
+       class="btn btn-sm rounded-pill {% if status==slug %}btn-primary{% else %}btn-outline-secondary{% endif %}">{{ lbl }}</a>
+    {% endfor %}
+  </div>
+  {% if disputes %}
+  <div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr><th>#</th><th>Обмін</th><th>Від кого</th><th>Причина</th><th>Статус</th><th>Дата</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for d in disputes %}
+          {% set slabel, scolor = d.status_label() %}
+          <tr>
+            <td class="text-muted small">{{ d.id }}</td>
+            <td><a href="{{ url_for('exchanges.detail', exchange_id=d.exchange_id) }}" target="_blank">#{{ d.exchange_id }}</a></td>
+            <td class="small">{{ d.opener.full_name or d.opener.email }}</td>
+            <td><span class="badge bg-warning-subtle text-warning small">{{ d.REASONS.get(d.reason, d.reason) }}</span></td>
+            <td><span class="badge bg-{{ scolor }}-subtle text-{{ scolor }}">{{ slabel }}</span></td>
+            <td class="text-muted small">{{ d.created_at.strftime('%d.%m.%Y') }}</td>
+            <td>
+              <a href="{{ url_for('disputes.detail', dispute_id=d.id) }}"
+                 class="btn btn-xs btn-outline-primary rounded-pill px-2">Розглянути</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="text-center py-5 text-muted"><div class="display-3 mb-3">✅</div><h5>Диспутів немає</h5></div>
+  {% endif %}
+</div>
+{% endblock %}

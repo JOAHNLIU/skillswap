@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Підтвердження email — SkillSwap{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 col-md-8">
+
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-5 text-center">
+
+                    <div class="display-3 mb-3">✉️</div>
+
+                    <h1 class="h3 fw-bold mb-3">
+                        Підтвердіть вашу пошту
+                    </h1>
+
+                    <p class="text-muted mb-4">
+                        Ми надіслали лист із кнопкою підтвердження на адресу:
+                        <br>
+                        <strong>{{ current_user.email }}</strong>
+                    </p>
+
+                    <div class="alert alert-info text-start rounded-4">
+                        <strong>Що потрібно зробити:</strong>
+
+                        <ol class="mt-2 mb-0">
+                            <li>Відкрийте свою поштову скриньку.</li>
+                            <li>Знайдіть лист “SkillSwap — підтвердження email”.</li>
+                            <li>Натисніть кнопку “Підтвердити email”.</li>
+                            <li>Після підтвердження вас поверне до SkillSwap.</li>
+                        </ol>
+                    </div>
+
+                    <div class="alert alert-warning text-start rounded-4 mt-3">
+                        <strong>Важливо:</strong>
+                        підтвердити акаунт можна тільки через лист на вказаній пошті.
+                        Ручного підтвердження на сайті немає.
+                    </div>
+
+                    <form method="POST" action="{{ url_for('auth.resend_verification') }}">
+                        {% if csrf_token is defined %}
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        {% endif %}
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary w-100 rounded-pill fw-semibold py-3 mt-3"
+                        >
+                            Надіслати лист повторно
+                        </button>
+                    </form>
+
+                    <a
+                        href="{{ url_for('auth.logout') }}"
+                        class="btn btn-outline-secondary w-100 rounded-pill mt-3 py-3"
+                    >
+                        Вийти і підтвердити пізніше
+                    </a>
+
+                    <p class="small text-muted mt-4 mb-0">
+                        Без підтвердження email система не дозволить перейти
+                        до профілю, навичок, пошуку та обмінів.
+                    </p>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

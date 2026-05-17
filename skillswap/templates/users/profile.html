@@ -1,0 +1,465 @@
+{# filepath: skillswap/templates/users/profile.html #}
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+
+  {# ── Banned banner ──────────────────────────────────────────────────── #}
+  {% if profile_user.is_banned %}
+  <div class="alert alert-danger d-flex align-items-center gap-3 mb-4 shadow-sm">
+    <span class="fs-2">🚫</span>
+    <div>
+      <div class="fw-bold">Акаунт заблоковано</div>
+      <div class="small">
+        Цей користувач був заблокований адміністрацією.
+        {% if profile_user.ban_record and profile_user.ban_record.reason %}
+        Причина: <em>{{ profile_user.ban_record.reason }}</em>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="row g-4">
+
+    {# ── Left: Profile card ───────────────────────────────────────────── #}
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body p-4 text-center">
+          <img src="{{ profile_user.avatar_or_default() }}"
+               class="rounded-circle mb-3 shadow {% if profile_user.is_banned %}opacity-50{% endif %}"
+               width="100" height="100" style="object-fit:cover;" alt="avatar"/>
+          <h4 class="fw-bold mb-0">
+            {{ profile_user.full_name or profile_user.email }}
+            {% if profile_user.is_banned %}
+            <span class="badge bg-danger ms-1">🚫 БАН</span>
+            {% endif %}
+            {% if profile_user.is_admin %}
+            <span class="badge bg-warning text-dark ms-1">🛠</span>
+            {% endif %}
+          </h4>
+
+          {% if profile_user.city %}
+          <div class="text-muted small mb-1">
+            <i class="bi bi-geo-alt-fill"></i> {{ profile_user.city }}
+          </div>
+          {% endif %}
+          {% if profile_user.age or profile_user.gender %}
+          <div class="text-muted small mb-2">
+            {% if profile_user.age %}{{ profile_user.age }} р.{% endif %}
+            {% if profile_user.gender %}
+              {% set gmap = {'male':'Чоловік','female':'Жінка','other':'Інше','prefer_not':'—'} %}
+              · {{ gmap.get(profile_user.gender, profile_user.gender) }}
+            {% endif %}
+          </div>
+          {% endif %}
+
+          {# ── Pending reports badge ───────────────────────────────── #}
+          {% if pending_reports > 0 %}
+          <div class="mb-2">
+            <span class="badge bg-danger-subtle text-danger px-3 py-1 fw-semibold"
+                  title="Активних жалоб на цього користувача">
+              🚨 {{ pending_reports }} жалоб{% if pending_reports == 1 %}а{% elif pending_reports < 5 %}и{% endif %} на розгляді
+            </span>
+          </div>
+          {% endif %}
+
+          {# Rating #}
+          <div class="d-flex justify-content-center gap-3 mb-3">
+            <div class="text-center">
+              <div class="fw-bold text-warning">{{ "%.0f"|format(profile_user.rating_points) }}</div>
+              <div class="text-muted" style="font-size:.7rem;">Рейтинг</div>
+            </div>
+            <div class="text-center">
+              <div class="fw-bold text-success">{{ profile_user.review_count }}</div>
+              <div class="text-muted" style="font-size:.7rem;">Відгуків</div>
+            </div>
+            <div class="text-center">
+              <div class="fw-bold text-primary">{{ offer_skills|length }}</div>
+              <div class="text-muted" style="font-size:.7rem;">Навичок</div>
+            </div>
+          </div>
+
+          {# Rating breakdown #}
+          {% if profile_user.teaching_rating > 0 or profile_user.communication_rating > 0 %}
+          <div class="text-start mb-3">
+            <div class="d-flex justify-content-between small mb-1">
+              <span class="text-muted">🎓 Навчання</span>
+              <span class="fw-semibold">{{ "%.1f"|format(profile_user.teaching_rating) }}/5</span>
+            </div>
+            <div class="progress mb-2" style="height:4px;">
+              <div class="progress-bar bg-success"
+                   style="width:{{ (profile_user.teaching_rating / 5 * 100)|int }}%"></div>
+            </div>
+            <div class="d-flex justify-content-between small mb-1">
+              <span class="text-muted">💬 Спілкування</span>
+              <span class="fw-semibold">{{ "%.1f"|format(profile_user.communication_rating) }}/5</span>
+            </div>
+            <div class="progress" style="height:4px;">
+              <div class="progress-bar bg-info"
+                   style="width:{{ (profile_user.communication_rating / 5 * 100)|int }}%"></div>
+            </div>
+          </div>
+          {% endif %}
+
+          {% if profile_user.available_from and profile_user.available_to %}
+          <div class="text-muted small mb-3">
+            <i class="bi bi-clock"></i>
+            {{ profile_user.available_from }}–{{ profile_user.available_to }}
+          </div>
+          {% endif %}
+
+          {# ── Actions ─────────────────────────────────────────────── #}
+          {% if is_own %}
+          <div class="d-grid gap-2">
+            <a href="{{ url_for('users.edit', user_id=profile_user.id) }}"
+               class="btn btn-outline-primary rounded-pill">
+              <i class="bi bi-pencil"></i> Редагувати профіль
+            </a>
+            <a href="{{ url_for('skills.my_skills') }}"
+               class="btn btn-outline-success rounded-pill">
+              <i class="bi bi-lightning"></i> Мої навички
+            </a>
+            <a href="{{ url_for('skills.index') }}"
+               class="btn btn-primary rounded-pill">
+              <i class="bi bi-search"></i> Знайти партнера
+            </a>
+            <a href="{{ url_for('users.preview', user_id=profile_user.id) }}"
+               class="btn btn-outline-secondary btn-sm rounded-pill">
+              👁 Попередній перегляд
+            </a>
+            {% if profile_user.totp_enabled %}
+            <button class="btn btn-outline-secondary btn-sm rounded-pill"
+                    data-bs-toggle="modal" data-bs-target="#disable2faModal">
+              🔐 Вимкнути 2FA
+            </button>
+            {% else %}
+            <a href="{{ url_for('totp.setup') }}"
+               class="btn btn-outline-success btn-sm rounded-pill">
+              🔐 Увімкнути 2FA
+            </a>
+            {% endif %}
+            <button type="button"
+                    class="btn btn-outline-danger btn-sm rounded-pill"
+                    data-bs-toggle="modal"
+                    data-bs-target="#deleteAccountModal">
+              <i class="bi bi-trash"></i> Видалити акаунт
+            </button>
+          </div>
+          {% else %}
+          <div class="mb-2">
+            <span class="badge bg-success fw-semibold px-3 py-2">
+              {{ match_score }}% сумісність
+            </span>
+          </div>
+          {% if not profile_user.is_banned %}
+          <div class="d-grid gap-2">
+            <a href="{{ url_for('exchanges.create', receiver_id=profile_user.id) }}"
+               class="btn btn-primary rounded-pill">
+              <i class="bi bi-arrow-left-right"></i> Запропонувати обмін
+            </a>
+            <a href="{{ url_for('reports.create', user_id=profile_user.id) }}"
+               class="btn btn-outline-danger btn-sm rounded-pill">
+              🚨 Поскаржитись
+            </a>
+          </div>
+          {% else %}
+          <div class="alert alert-secondary small text-center mb-0">
+            Обмін з заблокованим користувачем недоступний
+          </div>
+          {% endif %}
+          {% endif %}
+        </div>
+      </div>
+
+      {# Badges #}
+      {% if badges %}
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-3">
+          <h6 class="fw-bold mb-2">🏅 Значки</h6>
+          <div class="d-flex flex-wrap gap-2">
+            {% for badge in badges %}
+            <span class="badge bg-warning-subtle text-warning-emphasis fs-6 px-2 py-1"
+                  title="{{ badge.description }}">
+              {{ badge.icon }} {{ badge.name }}
+            </span>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    {# ── Right: Skills + Bio + Reviews ──────────────────────────────── #}
+    <div class="col-lg-8">
+
+      {% if profile_user.bio %}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body p-3">
+          <h6 class="fw-bold mb-2">
+            <i class="bi bi-person-lines-fill text-primary"></i> Про себе
+          </h6>
+          <p class="mb-0 text-muted">{{ profile_user.bio }}</p>
+        </div>
+      </div>
+      {% endif %}
+
+
+      {# ── Profile Views + Referral ────────────────────────────────── #}
+      {% if is_own %}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body p-3">
+          <div class="row g-2">
+            <div class="col-6 text-center">
+              <div class="fw-bold text-info fs-4">{{ profile_user.profile_views or 0 }}</div>
+              <div class="text-muted small">👁 Переглядів профілю</div>
+            </div>
+            <div class="col-6 text-center">
+              <div class="fw-bold text-success fs-4">+{{ profile_user.rating_points|int }}</div>
+              <div class="text-muted small">⭐ Рейтинг-балів</div>
+            </div>
+          </div>
+          {% if profile_user.referral_code %}
+          <hr class="my-2"/>
+          <div class="small text-muted mb-1">🔗 Реферальне посилання:</div>
+          <div class="input-group input-group-sm">
+            <input type="text" class="form-control form-control-sm rounded-start"
+                   id="refLink" readonly
+                   value="{{ request.host_url }}auth/register?ref={{ profile_user.referral_code }}"/>
+            <button class="btn btn-outline-secondary btn-sm"
+                    onclick="navigator.clipboard.writeText(document.getElementById('refLink').value);
+                             this.textContent='✅'">
+              📋
+            </button>
+          </div>
+          <div class="form-text">За кожного залученого друга +25 балів обом</div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      {# ── Exchange Statistics ─────────────────────────────────────────── #}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body p-3">
+          <h6 class="fw-bold mb-3">📊 Статистика обмінів</h6>
+          <div class="row g-2 text-center mb-3">
+            <div class="col-3">
+              <div class="fw-bold text-primary fs-5">{{ exchange_stats.total }}</div>
+              <div class="text-muted" style="font-size:.7rem;">Всього</div>
+            </div>
+            <div class="col-3">
+              <div class="fw-bold text-success fs-5">{{ exchange_stats.completed }}</div>
+              <div class="text-muted" style="font-size:.7rem;">Завершено</div>
+            </div>
+            <div class="col-3">
+              <div class="fw-bold text-warning fs-5">{{ exchange_stats.pending }}</div>
+              <div class="text-muted" style="font-size:.7rem;">Очікують</div>
+            </div>
+            <div class="col-3">
+              <div class="fw-bold text-danger fs-5">{{ exchange_stats.rejected }}</div>
+              <div class="text-muted" style="font-size:.7rem;">Відхилено</div>
+            </div>
+          </div>
+          {% if exchange_stats.total > 0 %}
+          <div class="d-flex justify-content-between small text-muted mb-1">
+            <span>Успішність</span>
+            <span class="fw-semibold text-success">{{ exchange_stats.success_rate }}%</span>
+          </div>
+          <div class="progress" style="height:6px;">
+            <div class="progress-bar bg-success"
+                 style="width:{{ exchange_stats.success_rate }}%"></div>
+          </div>
+          {% endif %}
+          {% if top_categories %}
+          <div class="mt-3">
+            <div class="text-muted small mb-1">Топ категорії:</div>
+            {% for cat, cnt in top_categories %}
+            <span class="badge bg-light text-dark me-1 small border">{{ cat }} ({{ cnt }})</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body p-3">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <h6 class="fw-bold text-success mb-2">✅ Пропонує ({{ offer_skills|length }})</h6>
+              {% if offer_skills %}
+                {% for s in offer_skills %}
+                <div class="d-inline-flex align-items-center gap-1 me-1 mb-1">
+                  <a href="{{ url_for('skills.detail', skill_id=s.id) }}"
+                     class="badge bg-success-subtle text-success text-decoration-none px-2 py-1">
+                    {{ s.title }}
+                    <span class="opacity-75 small">({{ s.level }})</span>
+                  </a>
+                  {% set endorse_count = s.endorsements.count() %}
+                  {% set already = s.endorsements.filter_by(endorser_id=current_user.id).first() %}
+                  {% if not is_own %}
+                  <button class="btn btn-xs rounded-pill px-1 py-0 endorse-btn
+                                 {% if already %}btn-success{% else %}btn-outline-secondary{% endif %}"
+                          data-skill-id="{{ s.id }}"
+                          title="Підтвердити навичку"
+                          style="font-size:.65rem;">
+                    👍 <span class="endorse-count">{{ endorse_count }}</span>
+                  </button>
+                  {% else %}
+                  <span class="text-muted small">👍 {{ endorse_count }}</span>
+                  {% endif %}
+                </div>
+                {% endfor %}
+              {% else %}
+              <p class="text-muted small">Навичок немає</p>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <h6 class="fw-bold text-primary mb-2">🔍 Шукає ({{ want_skills|length }})</h6>
+              {% if want_skills %}
+                {% for s in want_skills %}
+                <span class="badge bg-primary-subtle text-primary me-1 mb-1 px-2 py-1">
+                  {{ s.title }}
+                </span>
+                {% endfor %}
+              {% else %}
+              <p class="text-muted small">Не вказано</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-0">
+          <h6 class="fw-bold mb-0">⭐ Відгуки ({{ reviews|length }})</h6>
+        </div>
+        <div class="card-body pt-0">
+          {% if reviews %}
+            {% for rev in reviews %}
+            <div class="border-bottom pb-3 mb-3">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <div class="d-flex align-items-center gap-2">
+                  <img src="{{ rev.reviewer.avatar_or_default() }}"
+                       class="rounded-circle" width="28" height="28"
+                       style="object-fit:cover;"/>
+                  <span class="fw-semibold small">
+                    {{ rev.reviewer.full_name or rev.reviewer.email }}
+                  </span>
+                </div>
+                <div>
+                  <span class="text-warning">
+                    {{ '★' * rev.rating }}{{ '☆' * (5 - rev.rating) }}
+                  </span>
+                  <span class="text-muted small ms-1">
+                    {{ rev.created_at.strftime('%d.%m.%Y') }}
+                  </span>
+                </div>
+              </div>
+              {% if rev.comment %}
+              <p class="text-muted small mb-0 ms-5">{{ rev.comment }}</p>
+              {% endif %}
+            </div>
+            {% endfor %}
+          {% else %}
+          <div class="text-center py-3 text-muted small">
+            Відгуків ще немає
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{# 2FA Disable Modal #}
+{% if is_own and profile_user.totp_enabled %}
+<div class="modal fade" id="disable2faModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-0">
+        <h6 class="modal-title fw-bold">🔐 Вимкнути 2FA</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small">Введи код з Google Authenticator для підтвердження</p>
+        <form method="POST" action="{{ url_for('totp.disable') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="text" name="code" class="form-control text-center fw-bold fs-5 mb-3"
+                 maxlength="6" pattern="\d{6}" placeholder="000000" autofocus>
+          <button type="submit" class="btn btn-danger w-100 rounded-pill">Вимкнути</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# Account Deletion Modal #}
+{% if is_own %}
+<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <form method="POST" action="{{ url_for('users.delete_account', user_id=profile_user.id) }}">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title" id="deleteAccountModalLabel">
+            <i class="bi bi-exclamation-triangle"></i> Видалити акаунт назавжди
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Закрити"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <p class="mb-2">
+            Ця дія повністю видалить ваш акаунт, профіль, навички, обміни, повідомлення,
+            відгуки, звернення в підтримку та інші пов'язані записи.
+          </p>
+          <p class="text-danger fw-semibold mb-3">
+            Відновити акаунт після цього буде неможливо.
+          </p>
+          <label for="confirm_delete" class="form-label fw-semibold">
+            Для підтвердження введіть <code>DELETE</code>
+          </label>
+          <input type="text"
+                 class="form-control"
+                 id="confirm_delete"
+                 name="confirm_delete"
+                 autocomplete="off"
+                 placeholder="DELETE"
+                 required>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary rounded-pill" data-bs-dismiss="modal">
+            Скасувати
+          </button>
+          <button type="submit" class="btn btn-danger rounded-pill">
+            Так, видалити акаунт
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+document.addEventListener('click', async e => {
+  const btn = e.target.closest('.endorse-btn');
+  if (!btn) return;
+  const skillId = btn.dataset.skillId;
+  try {
+    const r = await fetch(`/api/skills/${skillId}/endorse`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCsrfToken() }
+    });
+    const data = await r.json();
+    if (data.error) return;
+    btn.querySelector('.endorse-count').textContent = data.count;
+    btn.classList.toggle('btn-success', data.endorsed);
+    btn.classList.toggle('btn-outline-secondary', !data.endorsed);
+  } catch(_) {}
+});
+</script>
+{% endblock %}

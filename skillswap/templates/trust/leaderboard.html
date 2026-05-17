@@ -1,0 +1,69 @@
+{# filepath: skillswap/templates/trust/leaderboard.html #}
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="fw-bold mb-0">🏆 Топ перевірених навичок</h2>
+      <p class="text-muted small mb-0">Навички з найвищим Trust Score на платформі</p>
+    </div>
+    <a href="{{ url_for('skills.index') }}" class="btn btn-outline-secondary rounded-pill">← Пошук</a>
+  </div>
+
+  {% if entries %}
+  <div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-4">#</th><th>Навичка</th><th>Власник</th>
+            <th>Категорія</th><th>Trust Score</th><th>Рівень</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for i, entry in entries | enumerate %}
+          <tr>
+            <td class="ps-4">
+              {% if i == 0 %}🥇{% elif i == 1 %}🥈{% elif i == 2 %}🥉
+              {% else %}<span class="text-muted">{{ i + 1 }}</span>{% endif %}
+            </td>
+            <td class="fw-semibold">{{ entry.skill.title }}</td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <img src="{{ entry.skill.user.avatar_or_default() }}" class="rounded-circle"
+                     width="28" height="28" style="object-fit:cover;"/>
+                <a href="{{ url_for('users.profile', user_id=entry.skill.user_id) }}" class="small text-decoration-none">
+                  {{ entry.skill.user.full_name or entry.skill.user.email }}
+                </a>
+              </div>
+            </td>
+            <td><span class="badge bg-light text-dark border">{{ entry.skill.category }}</span></td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="progress flex-grow-1" style="height:8px;min-width:80px;">
+                  <div class="progress-bar {{ 'bg-success' if entry.score>=60 else 'bg-warning' if entry.score>=30 else 'bg-secondary' }}"
+                       style="width:{{ entry.score }}%"></div>
+                </div>
+                <span class="fw-bold small">{{ entry.score|int }}</span>
+              </div>
+            </td>
+            <td><span class="badge bg-primary-subtle text-primary">{{ entry.badge_icon }} {{ entry.badge_label }}</span></td>
+            <td>
+              <a href="{{ url_for('trust.skill_detail', skill_id=entry.skill.id) }}"
+                 class="btn btn-xs btn-outline-primary rounded-pill px-2">Деталі</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <div class="display-3 mb-3">🔰</div>
+    <h5>Поки немає оцінених навичок</h5>
+    <p class="small">Trust Score розраховується після обмінів і відгуків</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

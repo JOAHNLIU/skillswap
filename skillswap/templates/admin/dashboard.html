@@ -1,0 +1,163 @@
+{# filepath: skillswap/templates/admin/dashboard.html #}
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0">🛠 Адмін-панель</h2>
+    <span class="badge bg-danger px-3 py-2 fs-6">ADMIN</span>
+  </div>
+
+  {# Stats grid #}
+  <div class="row g-3 mb-4">
+    {% set cards = [
+      ('👥', 'Юзерів',       stats.users,            'primary'),
+      ('⚡', 'Навичок',      stats.skills,            'success'),
+      ('🔄', 'Обмінів',      stats.exchanges,         'warning'),
+      ('🏁', 'Завершено',    stats.completed,         'secondary'),
+      ('⏳', 'Очікують',     stats.pending,           'danger'),
+      ('⭐', 'Відгуків',     stats.reviews,           'info'),
+      ('🚨', 'Жалоб',        stats.reports_pending,   'danger'),
+      ('🚫', 'Заблокованих', stats.banned,            'dark'),
+      ('🎧', 'Тікетів',      stats.tickets_open,      'warning'),
+    ] %}
+    {% for icon, label, value, color in cards %}
+    <div class="col-6 col-sm-3 col-lg-3">
+      <div class="card border-0 shadow-sm text-center p-3 h-100">
+        <div class="fs-2">{{ icon }}</div>
+        <div class="fs-3 fw-bold text-{{ color }}">{{ value }}</div>
+        <div class="text-muted small">{{ label }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# Charts #}
+  <div class="row g-3 mb-4">
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="fw-bold mb-0">📈 Реєстрації (30 днів)</h6>
+          <a href="{{ url_for('admin.export_users') }}"
+             class="btn btn-xs btn-outline-secondary rounded-pill px-2 py-0 small">
+            ⬇ CSV
+          </a>
+        </div>
+        <canvas id="regChart" height="120"></canvas>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="fw-bold mb-0">🔄 Обміни (30 днів)</h6>
+          <a href="{{ url_for('admin.export_exchanges') }}"
+             class="btn btn-xs btn-outline-secondary rounded-pill px-2 py-0 small">
+            ⬇ CSV
+          </a>
+        </div>
+        <canvas id="exchChart" height="120"></canvas>
+      </div>
+    </div>
+  </div>
+
+  {# Nav cards #}
+  <div class="row g-3 mb-4">
+    {% set nav_items = [
+      ('admin.users',       '👥', 'Юзери',       'Перегляд, пошук, бан'),
+      ('admin.skills',      '⚡', 'Навички',      'Всі навички платформи'),
+      ('admin.exchanges',   '🔄', 'Обміни',       'Всі обміни і статуси'),
+      ('admin.reports',     '🚨', 'Жалоби',       'Розгляд скарг'),
+      ('admin.banned_list', '🚫', 'Заблоковані',  'Список банів'),
+      ('admin.tickets',      '🎧', 'Підтримка',    'Тікети користувачів'),
+      ('admin.disputes_list', '⚠️', 'Диспути',      'Вирішення суперечок'),
+      ('admin.audit_log',    '🔍', 'Аудит-лог',    'Всі дії в системі'),
+      ('admin.roles',        '👑', 'Ролі RBAC',    'Управління правами'),
+    ] %}
+    {% for endpoint, icon, title, desc in nav_items %}
+    <div class="col-6 col-md-4 col-lg-2">
+      <a href="{{ url_for(endpoint) }}"
+         class="card border-0 shadow-sm p-3 text-center text-decoration-none d-block h-100">
+        <div class="fs-1 mb-1">{{ icon }}</div>
+        <h6 class="fw-bold mb-1 small">{{ title }}</h6>
+        <p class="text-muted mb-0" style="font-size:.72rem;">{{ desc }}</p>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# Recent users #}
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent fw-bold border-0">
+      Нові юзери
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th><th>Email</th><th>Ім'я</th>
+            <th>Місто</th><th>Рейтинг</th><th>Жалоби</th><th>Дата</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in recent_users %}
+          <tr {% if u.is_banned %}class="table-danger"{% endif %}>
+            <td class="text-muted small">{{ u.id }}</td>
+            <td>
+              <a href="{{ url_for('users.profile', user_id=u.id) }}">{{ u.email }}</a>
+              {% if u.is_banned %}<span class="badge bg-danger ms-1">🚫</span>{% endif %}
+              {% if u.is_admin %}<span class="badge bg-warning text-dark ms-1">🛠</span>{% endif %}
+            </td>
+            <td>{{ u.full_name or '—' }}</td>
+            <td>{{ u.city or '—' }}</td>
+            <td>{{ "%.0f"|format(u.rating_points) }}</td>
+            <td>
+              {% set rc = u.pending_reports_count() %}
+              {% if rc > 0 %}
+              <span class="badge bg-danger">{{ rc }}</span>
+              {% else %}
+              <span class="text-muted small">0</span>
+              {% endif %}
+            </td>
+            <td class="text-muted small">{{ u.created_at.strftime('%d.%m.%Y') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+fetch("{{ url_for('admin.charts_data') }}")
+  .then(r => r.json())
+  .then(data => {
+    const mkChart = (id, label, color, rows) => {
+      const ctx = document.getElementById(id);
+      if (!ctx) return;
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: rows.map(r => r.day),
+          datasets: [{
+            label: label,
+            data: rows.map(r => r.count),
+            borderColor: color,
+            backgroundColor: color + '22',
+            tension: 0.4, fill: true, pointRadius: 3
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+      });
+    };
+    mkChart('regChart',  'Реєстрації', '#6366f1', data.registrations);
+    mkChart('exchChart', 'Обміни',     '#22c55e', data.exchanges);
+  })
+  .catch(() => {});
+</script>
+{% endblock %}

@@ -1,0 +1,226 @@
+{# filepath: skillswap/templates/health/dashboard.html #}
+{% extends "base.html" %}
+{% block extra_css %}
+<style>
+.status-ok      { border-left:4px solid #22c55e !important; }
+.status-warning { border-left:4px solid #f59e0b !important; }
+.status-error   { border-left:4px solid #ef4444 !important; }
+.status-not_configured { border-left:4px solid #94a3b8 !important; }
+.metric-val { font-size:1.6rem; font-weight:700; line-height:1; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="fw-bold mb-0">
+        {% if overall=='ok' %}✅{% elif overall=='warning' %}⚠️{% else %}🔴{% endif %}
+        Platform Health
+      </h2>
+      <div class="text-muted small">
+        {{ data.collected_at[:19].replace('T',' ') }} UTC ·
+        <span class="badge {% if overall=='ok' %}bg-success{% elif overall=='warning' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+          {{ overall.upper() }}
+        </span>
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <form method="POST" action="{{ url_for('health.snapshot') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-outline-primary rounded-pill btn-sm">💾 Snapshot</button>
+      </form>
+      <a href="{{ url_for('health.metrics') }}" target="_blank" class="btn btn-outline-secondary rounded-pill btn-sm">🔗 JSON</a>
+      <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary rounded-pill btn-sm">← Адмін</a>
+    </div>
+  </div>
+
+  {# KPI Row #}
+  {% set kpi = data.kpi %}
+  <h5 class="fw-bold mb-3">📊 KPI за 24 години</h5>
+  <div class="row g-3 mb-4">
+    {% for icon, label, value, color in [
+      ('👤','Реєстрацій',    kpi.registrations_24h, 'primary'),
+      ('🔄','Нових обмінів', kpi.exchanges_24h,     'warning'),
+      ('🏁','Завершено',     kpi.completed_24h,     'success'),
+      ('⭐','Відгуків',      kpi.reviews_24h,       'info'),
+      ('⚠️','Диспутів',      kpi.disputes_open,     'danger'),
+      ('❌','Пропущених сесій (7д)', kpi.sessions_missed_7d, 'secondary'),
+    ] %}
+    <div class="col-6 col-md-4 col-lg-2">
+      <div class="card border-0 shadow-sm text-center p-3 h-100">
+        <div class="fs-2">{{ icon }}</div>
+        <div class="metric-val text-{{ color }}">{{ value or 0 }}</div>
+        <div class="text-muted small mt-1">{{ label }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# System Cards #}
+  <h5 class="fw-bold mb-3">⚙️ Системні метрики</h5>
+  <div class="row g-3 mb-4">
+
+    {# DB #}
+    {% set db_d = data.db %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card border-0 shadow-sm h-100 status-{{ db_d.status }}">
+        <div class="card-body p-3">
+          <div class="d-flex justify-content-between mb-2">
+            <span class="fw-bold">🗄 База даних</span>
+            <span class="badge {% if db_d.status=='ok' %}bg-success{% else %}bg-danger{% endif %}">{{ db_d.status.upper() }}</span>
+          </div>
+          {% if db_d.status == 'ok' %}
+          <div class="text-muted small mb-1">Затримка: <b>{{ db_d.latency_ms }} мс</b></div>
+          {% for k, v in db_d.counts.items() %}
+          <div class="d-flex justify-content-between small">
+            <span class="text-muted">{{ k }}</span><span class="fw-semibold">{{ v }}</span>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div class="text-danger small">{{ db_d.get('error','—') }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# System #}
+    {% set sys = data.system %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card border-0 shadow-sm h-100 status-{{ sys.status }}">
+        <div class="card-body p-3">
+          <div class="d-flex justify-content-between mb-2">
+            <span class="fw-bold">💻 Система</span>
+            <span class="badge {% if sys.status=='ok' %}bg-success{% elif sys.status=='warning' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">{{ sys.status.upper() }}</span>
+          </div>
+          {% if sys.status in ('ok','warning') %}
+          <div class="small">
+            <div class="d-flex justify-content-between mb-1">
+              <span class="text-muted">CPU</span>
+              <span class="fw-semibold {% if sys.cpu_percent>80 %}text-danger{% endif %}">{{ sys.cpu_percent }}%</span>
+            </div>
+            <div class="progress mb-2" style="height:5px;">
+              <div class="progress-bar {% if sys.cpu_percent>80 %}bg-danger{% else %}bg-primary{% endif %}" style="width:{{ sys.cpu_percent }}%"></div>
+            </div>
+            <div class="d-flex justify-content-between mb-1">
+              <span class="text-muted">RAM</span>
+              <span class="fw-semibold {% if sys.ram_percent>80 %}text-danger{% endif %}">{{ sys.ram_percent }}%</span>
+            </div>
+            <div class="progress" style="height:5px;">
+              <div class="progress-bar {% if sys.ram_percent>80 %}bg-danger{% else %}bg-success{% endif %}" style="width:{{ sys.ram_percent }}%"></div>
+            </div>
+            <div class="text-muted mt-1">Uptime: <b>{{ sys.uptime_hours }}h</b></div>
+          </div>
+          {% else %}
+          <div class="text-muted small">{{ sys.get('note', sys.get('error','—')) }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# Disk #}
+    {% set disk = data.disk %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card border-0 shadow-sm h-100 status-{{ disk.status }}">
+        <div class="card-body p-3">
+          <div class="d-flex justify-content-between mb-2">
+            <span class="fw-bold">💾 Диск</span>
+            <span class="badge {% if disk.status=='ok' %}bg-success{% elif disk.status=='warning' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">{{ disk.status.upper() }}</span>
+          </div>
+          {% if disk.status in ('ok','warning') %}
+          <div class="small">
+            <div class="d-flex justify-content-between mb-1">
+              <span class="text-muted">Зайнято</span>
+              <span class="fw-semibold">{{ disk.disk_percent_used }}%</span>
+            </div>
+            <div class="progress mb-2" style="height:5px;">
+              <div class="progress-bar {% if disk.disk_percent_used>85 %}bg-danger{% else %}bg-info{% endif %}" style="width:{{ disk.disk_percent_used }}%"></div>
+            </div>
+            <div class="text-muted">Вільно: <b>{{ disk.disk_free_gb }} GB</b></div>
+            <div class="text-muted">Аватарів: <b>{{ disk.uploads_count }}</b></div>
+          </div>
+          {% else %}
+          <div class="text-muted small">{{ disk.get('note', disk.get('error','—')) }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# Celery #}
+    {% set cel = data.celery %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card border-0 shadow-sm h-100 status-{{ cel.status }}">
+        <div class="card-body p-3">
+          <div class="d-flex justify-content-between mb-2">
+            <span class="fw-bold">⚡ Celery/Redis</span>
+            <span class="badge {% if cel.status=='ok' %}bg-success{% elif cel.status=='not_configured' %}bg-secondary{% else %}bg-danger{% endif %}">{{ cel.status.upper() }}</span>
+          </div>
+          {% if cel.status == 'ok' %}
+          <div class="small">
+            <div class="text-muted">Redis: <b>{{ cel.redis_version }}</b></div>
+            <div class="text-muted">Клієнти: <b>{{ cel.connected_clients }}</b></div>
+            <div class="text-muted">Пам'ять: <b>{{ cel.used_memory_human }}</b></div>
+          </div>
+          {% else %}
+          <div class="text-muted small">{{ cel.get('note', cel.get('error','—')) }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# Errors #}
+    {% set err = data.errors %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card border-0 shadow-sm h-100 status-{{ err.status }}">
+        <div class="card-body p-3">
+          <div class="d-flex justify-content-between mb-2">
+            <span class="fw-bold">🚨 Помилки</span>
+            <span class="badge {% if err.status=='ok' %}bg-success{% else %}bg-warning text-dark{% endif %}">{{ err.status.upper() }}</span>
+          </div>
+          <div class="small">
+            <div class="d-flex justify-content-between">
+              <span class="text-muted">Помилок за 1 год.</span>
+              <span class="fw-semibold {% if err.errors_last_1h>10 %}text-danger{% endif %}">{{ err.errors_last_1h }}</span>
+            </div>
+            <div class="d-flex justify-content-between">
+              <span class="text-muted">Диспутів за 24 год.</span>
+              <span class="fw-semibold">{{ err.disputes_24h }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# Quick links #}
+    <div class="col-md-6 col-lg-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-3">
+          <div class="fw-bold mb-2 small">🔗 Швидкі посилання</div>
+          <div class="d-grid gap-1">
+            <a href="{{ url_for('admin.audit_log') }}" class="btn btn-xs btn-outline-secondary rounded-pill text-start">🔍 Аудит-лог</a>
+            <a href="{{ url_for('admin.disputes_list') }}" class="btn btn-xs btn-outline-warning rounded-pill text-start">⚠️ Диспути</a>
+            <a href="{{ url_for('admin.reports') }}" class="btn btn-xs btn-outline-danger rounded-pill text-start">🚨 Жалоби</a>
+            <a href="{{ url_for('trust.leaderboard') }}" class="btn btn-xs btn-outline-primary rounded-pill text-start">🏆 Trust Leaderboard</a>
+            <a href="{{ url_for('health.status') }}" target="_blank" class="btn btn-xs btn-outline-secondary rounded-pill text-start">💓 /health/status</a>
+            <a href="{{ url_for('apiv1.docs') }}" target="_blank" class="btn btn-xs btn-outline-primary rounded-pill text-start">📚 API Docs</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <details class="mt-2">
+    <summary class="fw-semibold text-muted small" style="cursor:pointer;">🔧 Raw JSON</summary>
+    <pre class="p-3 mt-2 border rounded-3" style="font-size:.72rem;max-height:300px;overflow-y:auto;background:var(--bs-body-bg);">{{ json_data }}</pre>
+  </details>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+let secs = 60;
+const h2 = document.querySelector('h2');
+const cd = document.createElement('span');
+cd.className = 'text-muted small ms-2';
+if(h2) h2.appendChild(cd);
+setInterval(()=>{ secs--; if(cd) cd.textContent=`(${secs}с)`; if(secs<=0) location.reload(); }, 1000);
+</script>
+{% endblock %}

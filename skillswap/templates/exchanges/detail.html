@@ -1,0 +1,232 @@
+{# filepath: skillswap/templates/exchanges/detail.html #}
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  {% set label, color = exchange.status_label() %}
+  {% set is_proposer = exchange.proposer_id == current_user.id %}
+  {% set partner = exchange.receiver if is_proposer else exchange.proposer %}
+  {% set valid_contract = exchange.agreement and exchange.agreement.is_signed_by_both and exchange.status == 'accepted' %}
+
+  <div class="row g-4">
+    {# ── Left: Info + Actions ────────────────────────────────────────────── #}
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body p-3">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold mb-0">Обмін #{{ exchange.id }}</h5>
+            <span class="badge bg-{{ color }}-subtle text-{{ color }} fw-semibold">{{ label }}</span>
+          </div>
+
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <img src="{{ partner.avatar_or_default() }}" class="rounded-circle"
+                 width="44" height="44" style="object-fit:cover;"/>
+            <div>
+              <div class="fw-semibold">{{ partner.full_name or partner.email }}</div>
+              <a href="{{ url_for('users.profile', user_id=partner.id) }}"
+                 class="text-muted small">Профіль →</a>
+              {% set pr = partner.pending_reports_count() %}
+              {% if pr > 0 %}
+              <div class="mt-1">
+                <span class="badge bg-danger-subtle text-danger small"
+                      title="Активних жалоб на цього користувача">
+                  🚨 {{ pr }} жалоб на розгляді
+                </span>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
+          {% if exchange.offered_skill %}
+          <div class="mb-2 small">
+            <span class="text-muted">Пропонується:</span>
+            <span class="badge bg-success-subtle text-success ms-1">{{ exchange.offered_skill.title }}</span>
+          </div>
+          {% endif %}
+          {% if exchange.requested_skill %}
+          <div class="mb-2 small">
+            <span class="text-muted">Запит:</span>
+            <span class="badge bg-primary-subtle text-primary ms-1">{{ exchange.requested_skill.title }}</span>
+          </div>
+          {% endif %}
+          {% if exchange.message %}
+          <div class="small text-muted border-top pt-2 mt-2">
+            <em>«{{ exchange.message }}»</em>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Actions #}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body p-3">
+          <h6 class="fw-bold mb-2">Дії</h6>
+          {% if exchange.status == 'pending' and not is_proposer %}
+          <form method="POST" action="{{ url_for('exchanges.accept', exchange_id=exchange.id) }}" class="mb-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-success w-100 rounded-pill fw-semibold">
+              ✅ Прийняти
+            </button>
+          </form>
+          <form method="POST" action="{{ url_for('exchanges.reject', exchange_id=exchange.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-danger w-100 rounded-pill">
+              ❌ Відхилити
+            </button>
+          </form>
+          {% elif exchange.status == 'accepted' %}
+          <form method="POST" action="{{ url_for('exchanges.complete', exchange_id=exchange.id) }}"
+                onsubmit="return confirm('Позначити як завершений?')" class="mb-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-warning w-100 rounded-pill fw-semibold">
+              🏁 Завершити
+            </button>
+          </form>
+          <a href="{{ url_for('exchanges.create_session', exchange_id=exchange.id) }}"
+             class="btn btn-outline-primary w-100 rounded-pill">
+            📅 Запланувати сесію
+          </a>
+          <a href="{{ url_for('agreements.view', exchange_id=exchange.id) }}"
+             class="btn btn-outline-secondary w-100 rounded-pill mb-2">
+            📋 Контракт
+            {% if exchange.agreement and exchange.agreement.is_signed_by_both %}
+            ✅
+            {% endif %}
+          </a>
+          {% if valid_contract %}
+          <a href="{{ url_for('exchanges.call', exchange_id=exchange.id) }}"
+             class="btn btn-success w-100 rounded-pill mb-2 fw-semibold">
+            📞 Дзвінок
+          </a>
+          {% else %}
+          <button type="button" class="btn btn-outline-secondary w-100 rounded-pill mb-2" disabled
+                  title="Дзвінок доступний тільки після підписання контракту обома сторонами">
+            📞 Дзвінок після контракту
+          </button>
+          {% endif %}
+          <a href="{{ url_for('disputes.open_dispute', exchange_id=exchange.id) }}"
+             class="btn btn-outline-warning w-100 rounded-pill">
+            ⚠️ Відкрити диспут
+          </a>
+          {% elif exchange.status == 'accepted' %}
+          {# Already handled above - this is fallthrough safety #}
+          {% elif exchange.status == 'completed' and not my_review %}
+          <a href="{{ url_for('exchanges.review', exchange_id=exchange.id) }}"
+             class="btn btn-primary w-100 rounded-pill fw-semibold">
+            ⭐ Залишити відгук
+          </a>
+          {% elif exchange.status == 'completed' and my_review %}
+          <div class="text-success small text-center">
+            <i class="bi bi-check-circle"></i> Відгук вже залишено
+          </div>
+          {% else %}
+          <div class="text-muted small text-center">{{ label }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Sessions #}
+      {% if sessions %}
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-3">
+          <h6 class="fw-bold mb-2">📅 Сесії</h6>
+          {% for s in sessions %}
+          <div class="d-flex justify-content-between align-items-center mb-2 small">
+            <div>
+              <div class="fw-semibold">{{ s.scheduled_at.strftime('%d.%m %H:%M') }}</div>
+              <div class="text-muted">{{ s.duration_minutes }} хв.</div>
+            </div>
+            <form method="POST" action="{{ url_for('exchanges.delete_session', exchange_id=exchange.id, session_id=s.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-xs btn-outline-danger rounded-pill px-2 py-0">×</button>
+            </form>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    {# ── Right: Chat ─────────────────────────────────────────────────────── #}
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm h-100 d-flex flex-column">
+        <div class="card-header bg-transparent border-bottom fw-bold">
+          <i class="bi bi-chat-dots"></i> Чат
+        </div>
+        <div class="card-body chat-messages overflow-auto flex-grow-1 p-3"
+             id="chatMessages" style="max-height:400px;">
+          {% if messages %}
+          {% for msg in messages %}
+          {% set is_mine = msg.sender_id == current_user.id %}
+          <div class="d-flex mb-3 {% if is_mine %}justify-content-end{% endif %}">
+            {% if not is_mine %}
+            <img src="{{ msg.sender.avatar_or_default() }}" class="rounded-circle me-2 flex-shrink-0"
+                 width="32" height="32" style="object-fit:cover;"/>
+            {% endif %}
+            <div class="chat-bubble {% if is_mine %}chat-bubble-mine{% else %}chat-bubble-other{% endif %}">
+              {% if msg.body %}
+              <div class="small">{{ msg.body }}</div>
+              {% endif %}
+              {% if msg.attachment_url %}
+                {% set is_image = msg.attachment_mime and msg.attachment_mime.startswith('image/') %}
+                <div class="mt-2">
+                  {% if is_image %}
+                  <a href="{{ msg.attachment_url }}" target="_blank" rel="noopener">
+                    <img src="{{ msg.attachment_url }}" alt="{{ msg.attachment_filename }}"
+                         class="rounded-3 border" style="max-width:220px;max-height:180px;object-fit:cover;">
+                  </a>
+                  {% endif %}
+                  <a href="{{ msg.attachment_url }}" target="_blank" rel="noopener"
+                     class="d-block small mt-1 {% if is_mine %}text-white{% else %}text-primary{% endif %}">
+                    📎 {{ msg.attachment_filename or 'Файл' }}
+                  </a>
+                </div>
+              {% endif %}
+              <div class="text-muted" style="font-size:.65rem;">
+                {{ msg.created_at.strftime('%H:%M') }}
+              </div>
+            </div>
+            {% if is_mine %}
+            <img src="{{ current_user.avatar_or_default() }}" class="rounded-circle ms-2 flex-shrink-0"
+                 width="32" height="32" style="object-fit:cover;"/>
+            {% endif %}
+          </div>
+          {% endfor %}
+          {% else %}
+          <div class="text-center text-muted py-5">
+            <i class="bi bi-chat fs-2"></i>
+            <p class="small mt-2">Повідомлень ще немає. Почни розмову!</p>
+          </div>
+          {% endif %}
+        </div>
+        {% if exchange.status in ('pending', 'accepted') %}
+        <div class="card-footer bg-transparent border-top p-3">
+          <form method="POST" enctype="multipart/form-data" class="d-flex gap-2 align-items-end" id="chatForm">
+            {{ msg_form.hidden_tag() }}
+            <div class="flex-grow-1">
+              {{ msg_form.body(class="form-control rounded-pill", rows=1,
+                 placeholder="Написати повідомлення...", id="msgInput") }}
+              <div class="mt-2">
+                {{ msg_form.attachment(class="form-control form-control-sm rounded-pill", accept="image/*,.pdf,.doc,.docx,.txt,.zip") }}
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary rounded-pill px-3">
+              <i class="bi bi-send-fill"></i>
+            </button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+window.EXCHANGE_ID     = {{ exchange.id }};
+window.CURRENT_USER_ID = {{ current_user.id }};
+window.CURRENT_USER_NAME   = {{ (current_user.full_name or current_user.email)|tojson }};
+window.CURRENT_USER_AVATAR = {{ current_user.avatar_or_default()|tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+{% endblock %}

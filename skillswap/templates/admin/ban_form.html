@@ -1,0 +1,66 @@
+{# filepath: skillswap/templates/admin/ban_form.html #}
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm border-danger">
+        <div class="card-body p-4">
+          <div class="text-center mb-4">
+            <div class="fs-1 mb-2">🚫</div>
+            <h4 class="fw-bold text-danger mb-1">Заблокувати користувача</h4>
+          </div>
+
+          <div class="d-flex align-items-center gap-3 p-3 bg-danger-subtle rounded-3 mb-4">
+            <img src="{{ target_user.avatar_or_default() }}"
+                 class="rounded-circle flex-shrink-0"
+                 width="52" height="52" style="object-fit:cover;"/>
+            <div>
+              <div class="fw-bold">{{ target_user.full_name or target_user.email }}</div>
+              <div class="text-muted small">{{ target_user.email }}</div>
+              <div class="text-muted small">
+                Рейтинг: {{ "%.0f"|format(target_user.rating_points) }} ·
+                Жалоб: {{ target_user.pending_reports_count() }}
+              </div>
+            </div>
+          </div>
+
+          <div class="alert alert-danger small">
+            ⚠️ Після блокування:
+            <ul class="mb-0 mt-1">
+              <li>Профіль зникне з пошуку</li>
+              <li>Функціонал буде заблоковано</li>
+              <li>При вході буде показано повідомлення про блокування</li>
+            </ul>
+          </div>
+
+          <form method="POST" novalidate>
+            {{ form.hidden_tag() }}
+            <div class="mb-4">
+              {{ form.reason.label(class="form-label fw-semibold") }}
+              {{ form.reason(
+                  class="form-control" + (" is-invalid" if form.reason.errors else ""),
+                  rows=3,
+                  placeholder="Вкажи причину блокування...") }}
+              {% for e in form.reason.errors %}
+              <div class="invalid-feedback">{{ e }}</div>
+              {% endfor %}
+            </div>
+            <div class="d-grid gap-2">
+              <button type="submit"
+                      class="btn btn-danger rounded-pill fw-semibold"
+                      onclick="return confirm('Точно заблокувати {{ target_user.email }}?')">
+                🚫 Заблокувати
+              </button>
+              <a href="{{ url_for('admin.users') }}"
+                 class="btn btn-outline-secondary rounded-pill">
+                Скасувати
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

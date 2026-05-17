@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-9">
+      <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center">
+          <div>
+            <h4 class="fw-bold mb-0">📞 Дзвінок за обміном #{{ exchange.id }}</h4>
+            <div class="text-muted small">Доступ відкрито, бо контракт підписано обома сторонами.</div>
+          </div>
+          <a href="{{ url_for('exchanges.detail', exchange_id=exchange.id) }}" class="btn btn-outline-secondary rounded-pill">← До чату</a>
+        </div>
+        <div class="card-body p-4">
+          <div class="alert alert-success border-0 rounded-4">
+            ✅ Дійсний контракт підтверджено. Дзвінок доступний тільки учасникам цього обміну.
+          </div>
+
+          <div class="ratio ratio-16x9 rounded-4 overflow-hidden border bg-dark">
+            <iframe
+              src="https://meet.jit.si/{{ room_name }}#config.prejoinPageEnabled=true&userInfo.displayName={{ (current_user.full_name or current_user.email)|urlencode }}"
+              allow="camera; microphone; fullscreen; display-capture; autoplay"
+              style="border:0;"
+              title="SkillSwap call room">
+            </iframe>
+          </div>
+
+          <div class="row g-3 mt-3">
+            <div class="col-md-6">
+              <div class="p-3 bg-body-secondary rounded-4 h-100">
+                <div class="fw-bold mb-1">Учасники</div>
+                <div class="small text-muted">{{ exchange.proposer.full_name or exchange.proposer.email }} ↔ {{ exchange.receiver.full_name or exchange.receiver.email }}</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="p-3 bg-body-secondary rounded-4 h-100">
+                <div class="fw-bold mb-1">Правило доступу</div>
+                <div class="small text-muted">Без підписаного контракту ця сторінка автоматично блокується.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

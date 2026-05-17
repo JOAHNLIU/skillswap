@@ -1,0 +1,98 @@
+{# filepath: skillswap/templates/admin/reports.html #}
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0">🚨 Жалоби</h2>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-sm btn-outline-secondary rounded-pill">← Адмін</a>
+  </div>
+
+  <div class="d-flex gap-2 mb-3 flex-wrap">
+    {% for slug, lbl in [('pending','На розгляді'),('reviewed','Розглянуто'),('dismissed','Відхилено'),('','Всі')] %}
+    <a href="{{ url_for('admin.reports', status=slug) }}"
+       class="btn btn-sm rounded-pill {% if status == slug %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+      {{ lbl }}
+    </a>
+    {% endfor %}
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>#</th>
+            <th>Від кого</th>
+            <th>На кого</th>
+            <th>Причина</th>
+            <th>Опис</th>
+            <th>Статус</th>
+            <th>Дата</th>
+            <th>Дія</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in pagination.items %}
+          {% set slabel, scolor = r.status_label() %}
+          <tr>
+            <td class="text-muted small">{{ r.id }}</td>
+            <td>
+              <a href="{{ url_for('users.profile', user_id=r.reporter_id) }}" target="_blank" class="small">
+                {{ r.reporter.full_name or r.reporter.email }}
+              </a>
+            </td>
+            <td>
+              <a href="{{ url_for('users.profile', user_id=r.reported_id) }}" target="_blank" class="small fw-semibold text-danger">
+                {{ r.reported.full_name or r.reported.email }}
+              </a>
+            </td>
+            <td><span class="badge bg-danger-subtle text-danger">{{ r.REASONS.get(r.reason, r.reason) }}</span></td>
+            <td class="small text-muted" style="max-width:200px;">
+              <span title="{{ r.description }}">
+                {{ r.description[:60] }}{% if r.description|length > 60 %}…{% endif %}
+              </span>
+            </td>
+            <td><span class="badge bg-{{ scolor }}-subtle text-{{ scolor }}">{{ slabel }}</span></td>
+            <td class="text-muted small">{{ r.created_at.strftime('%d.%m.%Y') }}</td>
+            <td>
+              <div class="d-flex gap-1 flex-wrap">
+                {% if r.status == 'pending' %}
+                <form method="POST" action="{{ url_for('admin.update_report', report_id=r.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="status" value="reviewed">
+                  <button class="btn btn-xs btn-outline-success rounded-pill px-2 py-0 small">✓</button>
+                </form>
+                <form method="POST" action="{{ url_for('admin.update_report', report_id=r.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="status" value="dismissed">
+                  <button class="btn btn-xs btn-outline-secondary rounded-pill px-2 py-0 small">✗</button>
+                </form>
+                {% endif %}
+                <a href="{{ url_for('admin.ban_user', user_id=r.reported_id) }}"
+                   class="btn btn-xs btn-outline-danger rounded-pill px-2 py-0 small">🚫 Бан</a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if pagination.pages > 1 %}
+  <nav class="mt-3">
+    <ul class="pagination pagination-sm justify-content-center">
+      {% for p in pagination.iter_pages() %}
+        {% if p %}
+        <li class="page-item {% if p == pagination.page %}active{% endif %}">
+          <a class="page-link" href="{{ url_for('admin.reports', page=p, status=status) }}">{{ p }}</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">…</span></li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+{% endblock %}
