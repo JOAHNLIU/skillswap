@@ -1,12 +1,3 @@
-"""SkillSwap — Flask application factory.
-
-Optimized for a diploma demonstration and Render Free:
-- one lightweight Gunicorn worker can run the app without memory spikes;
-- optional Socket.IO events are disabled by default and can be enabled with ENABLE_REALTIME=1;
-- landing page is lightweight by default;
-- database bootstrap is controlled by AUTO_DB_INIT=1/0.
-"""
-
 from __future__ import annotations
 
 import os
@@ -32,7 +23,6 @@ def _init_sentry() -> None:
 
 
 def create_app(config_name: str | None = None) -> Flask:
-    """Create and configure the SkillSwap Flask application."""
     _init_sentry()
 
     env_name = config_name or os.environ.get("FLASK_ENV", "development")
@@ -45,7 +35,6 @@ def create_app(config_name: str | None = None) -> Flask:
     )
     app.config.from_object(cfg)
 
-    # Mail settings are optional: the app works locally and on Render without SMTP.
     app.config["MAIL_SERVER"] = os.environ.get("MAIL_SERVER", "smtp.gmail.com")
     app.config["MAIL_PORT"] = int(os.environ.get("MAIL_PORT", "587"))
     app.config["MAIL_USE_TLS"] = os.environ.get("MAIL_USE_TLS", "1") == "1"
@@ -192,8 +181,6 @@ def _register_request_hooks(app: Flask) -> None:
             ban = current_user.ban_record
             return render_template("auth/banned.html", title="Акаунт заблоковано", ban=ban), 403
 
-        # New users must complete a two-step onboarding before using the system:
-        # 1) required profile data; 2) at least one offered and one wanted skill.
         email_allowed_prefixes = (
             "/auth/check-email",
             "/auth/resend-verification",
@@ -245,16 +232,19 @@ def _register_template_helpers(app: Flask) -> None:
 
 
 def _bootstrap_database() -> None:
-    """Create required tables and seed reference data for a demo deployment."""
     db.create_all()
     _seed_badges()
     _seed_rbac()
+
     try:
         _add_session_lifecycle_columns()
+    except Exception as error:
+        print(f"[DB INIT] Session lifecycle columns were not added: {error}")
+
+    try:
         _add_message_attachment_columns()
-    except Exception:
-        # Non-critical compatibility helper. Real migrations remain preferred.
-        pass
+    except Exception as error:
+        print(f"[DB INIT] Message attachment columns were not added: {error}")
 
 
 def _calc_completeness(user) -> int:
@@ -307,7 +297,6 @@ def _seed_rbac() -> None:
 
 
 def _add_session_lifecycle_columns() -> None:
-    """Add lifecycle columns to old SQLite databases if they are missing."""
     from sqlalchemy import inspect, text
 
     inspector = inspect(db.engine)
@@ -317,23 +306,25 @@ def _add_session_lifecycle_columns() -> None:
     existing = {column["name"] for column in inspector.get_columns("session")}
     new_columns = {
         "status": "VARCHAR(20) DEFAULT 'proposed'",
-        "proposer_confirmed_at": "DATETIME",
-        "receiver_confirmed_at": "DATETIME",
-        "proposer_completed_at": "DATETIME",
-        "receiver_completed_at": "DATETIME",
-        "proposer_marked_missed": "BOOLEAN",
-        "receiver_marked_missed": "BOOLEAN",
-        "reminder_sent_at": "DATETIME",
+        "proposer_confirmed_at": "TIMESTAMP",
+        "receiver_confirmed_at": "TIMESTAMP",
+        "proposer_completed_at": "TIMESTAMP",
+        "receiver_completed_at": "TIMESTAMP",
+        "proposer_marked_missed": "BOOLEAN DEFAULT FALSE",
+        "receiver_marked_missed": "BOOLEAN DEFAULT FALSE",
+        "reminder_sent_at": "TIMESTAMP",
     }
+
     with db.engine.connect() as connection:
         for column_name, column_type in new_columns.items():
             if column_name not in existing:
-                connection.execute(text(f"ALTER TABLE session ADD COLUMN {column_name} {column_type}"))
+                connection.execute(
+                    text(f'ALTER TABLE "session" ADD COLUMN {column_name} {column_type}')
+                )
         connection.commit()
 
 
 def _add_message_attachment_columns() -> None:
-    """Add optional attachment columns to old local/Render databases."""
     from sqlalchemy import inspect, text
 
     inspector = inspect(db.engine)
@@ -346,10 +337,13 @@ def _add_message_attachment_columns() -> None:
         "attachment_filename": "VARCHAR(255) DEFAULT ''",
         "attachment_mime": "VARCHAR(120) DEFAULT ''",
     }
+
     with db.engine.connect() as connection:
         for column_name, column_type in new_columns.items():
             if column_name not in existing:
-                connection.execute(text(f"ALTER TABLE message ADD COLUMN {column_name} {column_type}"))
+                connection.execute(
+                    text(f'ALTER TABLE "message" ADD COLUMN {column_name} {column_type}')
+                )
         connection.commit()
 
 
